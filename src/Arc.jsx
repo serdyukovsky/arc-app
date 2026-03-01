@@ -435,8 +435,7 @@ function calcStats(proto) {
     if (activeHabits.length === 0) continue;
     trackableDays++;
     if (key !== todayKey) trackableHistoryDays++;
-    const dayLogs  = proto.logs[key] || {};
-    const allDone  = activeHabits.every(h => dayLogs[h.id] === true);
+    const allDone  = dayFraction(proto, key, { withKintsugi: true }) >= 1;
     if (allDone) {
       completedDays++;
       runStreak++;
@@ -451,8 +450,7 @@ function calcStats(proto) {
     const key     = daysAgo(d);
     const activeHabits = activeHabitsOn(proto, key);
     if (activeHabits.length === 0) continue;
-    const dayLogs = proto.logs[key] || {};
-    const allDone = activeHabits.every(h => dayLogs[h.id] === true);
+    const allDone = dayFraction(proto, key, { withKintsugi: true }) >= 1;
     if (allDone) currentStreak++;
     else break;
   }
@@ -462,13 +460,45 @@ function calcStats(proto) {
     trackableDays };
 }
 
+function isHealedByKintsugi(proto, dateKey) {
+  if (!Array.isArray(proto?.kintsugi)) return false;
+  if (dateKey === today()) return false;
+  return proto.kintsugi.includes(dateKey);
+}
+
 // Day completion fraction 0–1
-function dayFraction(proto, dateKey) {
+function dayFraction(proto, dateKey, { withKintsugi = false } = {}) {
   const habits = activeHabitsOn(proto, dateKey);
   const dayLogs = proto.logs[dateKey] || {};
   if (habits.length === 0) return 0;
+  if (withKintsugi && isHealedByKintsugi(proto, dateKey)) return 1;
   const done = habits.filter(h => dayLogs[h.id] === true).length;
   return done / habits.length;
+}
+
+function getRepairableScars(proto) {
+  const todayKey = today();
+  const startDays = daysBetween(proto.startDate, todayKey);
+  const healed = new Set(proto.kintsugi || []);
+  const scars = [];
+
+  for (let d = 1; d <= startDays; d++) {
+    const key = daysAgo(d);
+    if (healed.has(key)) continue;
+    const habits = activeHabitsOn(proto, key);
+    if (habits.length === 0) continue;
+    const dayLogs = proto.logs[key] || {};
+    const done = habits.filter(h => dayLogs[h.id] === true).length;
+    if (done >= habits.length) continue;
+    scars.push({
+      key,
+      done,
+      total: habits.length,
+      fraction: habits.length ? done / habits.length : 0,
+    });
+  }
+
+  return scars; // newest -> oldest
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -526,7 +556,7 @@ function BeamRings({ protocols, onRingTap }) {
           const daysBack = WINDOW - 1 - d;
           if (daysBack > startDays) continue;
           const key  = daysAgo(daysBack);
-          sumFrac   += dayFraction(proto, key);
+          sumFrac   += dayFraction(proto, key, { withKintsugi: true });
           activeDays++;
         }
         const fillPct = activeDays > 0 ? sumFrac / activeDays : 0;
@@ -756,13 +786,7 @@ function ProtocolDetail({ proto, onBack, onKintsugi }) {
   const todayHabits = activeHabitsOn(proto, todayKey);
 
   const pColor = getColor(proto);
-
-  const hasScar = Object.entries(proto.logs).some(([key, dayLog]) => {
-    if (key === todayKey) return false;
-    const habits = activeHabitsOn(proto, key);
-    if (habits.length === 0) return false;
-    return habits.some(h => dayLog[h.id] === false);
-  });
+  const hasScar = getRepairableScars(proto).length > 0;
 
   // Section label style
   const sectionLabel = {
@@ -946,12 +970,7 @@ function ProtocolCard({ proto, onComplete, onUndo, onAddHabit, onRemoveHabit,
   const doneCount  = todayHabits.filter(h => todayLogs[h.id]).length;
   const totalCount = todayHabits.length;
   const allDone    = totalCount > 0 && doneCount === totalCount;
-  const hasScarred = (() => {
-    const yest = daysAgo(1);
-    const habitsY = activeHabitsOn(proto, yest);
-    const day = proto.logs[yest] || {};
-    return habitsY.some(h => day[h.id] === false);
-  })();
+  const hasScarred = getRepairableScars(proto).length > 0;
 
   const stats  = calcStats(proto);
   const pColor = getColor(proto);
@@ -1063,7 +1082,7 @@ function ProtocolCard({ proto, onComplete, onUndo, onAddHabit, onRemoveHabit,
           const isLast  = i === todayHabits.length - 1;
           const hasScar = (() => {
             const yest = daysAgo(1); const yl = proto.logs[yest];
-            return isHabitActiveOn(h, yest) && yl && yl[h.id] === false;
+            return isHabitActiveOn(h, yest) && yl && yl[h.id] !== true;
           })();
           const isK = proto.kintsugi.includes(daysAgo(1));
           return (
@@ -1385,12 +1404,68 @@ function AddSheet({ existingNames, usedColors, onAdd, onClose }) {
   );
 }
 
+function KintsugiSheet({ proto, candidates, onPick, onClose }) {
+  const pColor = getColor(proto);
+
+  return (
+    <div style={{ padding:"16px 16px 12px" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+        marginBottom:14 }}>
+        <div>
+          <div style={{ fontFamily:"monospace", fontSize:10, color:T.lo, letterSpacing:"0.16em" }}>
+            КИНЦУГИ
+          </div>
+          <div style={{ fontSize:14, color:T.hi, marginTop:5 }}>{proto.name}</div>
+        </div>
+        <button onClick={onClose}
+          style={{ width:28, height:28, borderRadius:8, background:T.s2,
+            border:`1px solid ${T.border}`, cursor:"pointer",
+            display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <X size={13} color={T.lo}/>
+        </button>
+      </div>
+
+      <div style={{ fontSize:11, color:T.mid, marginBottom:10 }}>
+        Выбери день с пропуском, который нужно восстановить
+      </div>
+
+      <div style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:"48vh", overflowY:"auto" }}>
+        {candidates.map(c => (
+          <motion.button key={c.key}
+            onClick={() => onPick(c.key)}
+            style={{ width:"100%", textAlign:"left",
+              padding:"11px 12px", borderRadius:12, cursor:"pointer",
+              background:T.s2, border:`1px solid ${T.border}`,
+              color:T.hi, display:"flex", alignItems:"center", gap:10 }}
+            whileHover={{ borderColor:T.borderHi }}
+            whileTap={{ scale:0.98 }}>
+            <div style={{ width:8, height:8, borderRadius:"50%",
+              background:T.gold, boxShadow:`0 0 10px ${T.goldGlow}`, flexShrink:0 }}/>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:13, color:T.hi, marginBottom:2 }}>{formatDate(c.key)}</div>
+              <div style={{ fontSize:10, color:T.lo, fontFamily:"monospace" }}>
+                {c.done}/{c.total} привычек · {Math.round(c.fraction * 100)}%
+              </div>
+            </div>
+            <div style={{ fontSize:10, color:pColor.main, fontFamily:"monospace",
+              letterSpacing:"0.05em" }}>
+              ВОССТАНОВИТЬ
+            </div>
+          </motion.button>
+        ))}
+      </div>
+      <div style={{ height:8 }}/>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════
 function Dashboard({ protocols: protos, setProtocols: setProtos }) {
   const [showAdd,    setShowAdd]    = useState(false);
   const [detailId,   setDetailId]   = useState(null);
+  const [kintsugiId, setKintsugiId] = useState(null);
   const [toast,      setToast]      = useState(null);
 
   const toast$ = msg => { setToast(msg); setTimeout(() => setToast(null), 2400); };
@@ -1402,10 +1477,11 @@ function Dashboard({ protocols: protos, setProtocols: setProtos }) {
     if (!tg?.BackButton) return;
     const onBack = () => {
       if (showAdd) setShowAdd(false);
+      else if (kintsugiId) setKintsugiId(null);
       else if (detailId) setDetailId(null);
     };
 
-    if (showAdd || detailId) {
+    if (showAdd || detailId || kintsugiId) {
       tg.BackButton.show();
       tg.BackButton.onClick(onBack);
     } else {
@@ -1414,9 +1490,9 @@ function Dashboard({ protocols: protos, setProtocols: setProtos }) {
 
     return () => {
       tg.BackButton.offClick(onBack);
-      if (!(showAdd || detailId)) tg.BackButton.hide();
+      if (!(showAdd || detailId || kintsugiId)) tg.BackButton.hide();
     };
-  }, [showAdd, detailId]);
+  }, [showAdd, detailId, kintsugiId]);
   const upd = (pid, fn) => setProtos(ps => ps.map(p => p.id !== pid ? p : fn(p)));
 
   const completeHabit = (pid, hid) => {
@@ -1460,16 +1536,38 @@ function Dashboard({ protocols: protos, setProtocols: setProtos }) {
 
   const renameProto = (pid, name) => upd(pid, p => ({ ...p, name }));
 
-  const doKintsugi = (pid) => {
-    const targetDay = daysAgo(1);
+  const openKintsugiPicker = (pid) => {
+    const proto = protos.find(p => p.id === pid);
+    if (!proto) return;
+    if (getRepairableScars(proto).length === 0) {
+      toast$("Нет пропущенных дней для восстановления");
+      return;
+    }
+    setKintsugiId(pid);
+  };
+
+  const doKintsugi = (pid, dateKey = null) => {
+    const proto = protos.find(p => p.id === pid);
+    if (!proto) return;
+    const candidates = getRepairableScars(proto);
+    const targetDay = dateKey && candidates.some(c => c.key === dateKey)
+      ? dateKey
+      : candidates[0]?.key;
+    if (!targetDay) {
+      toast$("Нет пропущенных дней для восстановления");
+      return;
+    }
     upd(pid, p => ({
       ...p,
       kintsugi: p.kintsugi.includes(targetDay) ? p.kintsugi : [...p.kintsugi, targetDay],
     }));
-    toast$("⟡ Трещина залита золотом");
+    toast$(`⟡ Восстановлен день: ${formatDate(targetDay)}`);
+    setKintsugiId(null);
   };
 
   const detailProto = protos.find(p => p.id === detailId);
+  const kintsugiProto = protos.find(p => p.id === kintsugiId) || null;
+  const kintsugiDays = kintsugiProto ? getRepairableScars(kintsugiProto) : [];
 
   const cV = { hidden:{}, visible:{ transition:{ staggerChildren:0.07, delayChildren:0.1 } } };
   const iV = { hidden:{ opacity:0, y:14 }, visible:{ opacity:1, y:0,
@@ -1574,7 +1672,7 @@ function Dashboard({ protocols: protos, setProtocols: setProtos }) {
                   onRemoveHabit={hid => removeHabit(proto.id, hid)}
                   onRemoveProtocol={() => removeProto(proto.id)}
                   onRenameProtocol={name => renameProto(proto.id, name)}
-                  onKintsugi={() => doKintsugi(proto.id)}
+                  onKintsugi={() => openKintsugiPicker(proto.id)}
                   onOpenDetail={() => setDetailId(proto.id)}
                 />
               </motion.div>
@@ -1589,7 +1687,7 @@ function Dashboard({ protocols: protos, setProtocols: setProtos }) {
           <ProtocolDetail
             proto={detailProto}
             onBack={() => setDetailId(null)}
-            onKintsugi={() => { doKintsugi(detailProto.id); }}
+            onKintsugi={() => { openKintsugiPicker(detailProto.id); }}
           />
         )}
       </AnimatePresence>
@@ -1618,6 +1716,33 @@ function Dashboard({ protocols: protos, setProtocols: setProtos }) {
                   setShowAdd(false);
                 }}
                 onClose={() => setShowAdd(false)}/>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Kintsugi day picker */}
+      <AnimatePresence>
+        {kintsugiProto && kintsugiDays.length > 0 && (
+          <>
+            <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+              style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.72)", zIndex:120 }}
+              onClick={() => setKintsugiId(null)}/>
+            <motion.div
+              initial={{ y:"100%" }} animate={{ y:0 }} exit={{ y:"100%" }}
+              transition={{ duration:0.34, ease:[0.16,1,0.3,1] }}
+              style={{ position:"fixed", bottom:0, left:"50%",
+                transform:"translateX(-50%)",
+                width:"100%", maxWidth:430,
+                borderRadius:"20px 20px 0 0",
+                background:T.s1, border:`1px solid ${T.border}`,
+                zIndex:121 }}>
+              <KintsugiSheet
+                proto={kintsugiProto}
+                candidates={kintsugiDays}
+                onPick={(dateKey) => doKintsugi(kintsugiProto.id, dateKey)}
+                onClose={() => setKintsugiId(null)}
+              />
             </motion.div>
           </>
         )}
