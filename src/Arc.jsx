@@ -707,7 +707,9 @@ function LPButton({ done, hasScar, kintsugi: isK, protoColor, onComplete, onUndo
 
   const press = useCallback(e => {
     e.stopPropagation();
-    if (done) { onUndo?.(); return; }
+    e.preventDefault();
+    if (done) { triggerHaptic("light"); onUndo?.(); return; }
+    triggerHaptic("light");
     setOn(true); setProg(0);
     t0.current = performance.now();
     const tick = now => {
@@ -727,11 +729,9 @@ function LPButton({ done, hasScar, kintsugi: isK, protoColor, onComplete, onUndo
     <motion.div
       style={{ width:SIZE, height:SIZE, position:"relative", cursor:"pointer",
         display:"flex", alignItems:"center", justifyContent:"center",
-        flexShrink:0, userSelect:"none" }}
-      onMouseDown={press} onMouseUp={cancel} onMouseLeave={cancel}
-      onTouchStart={press} onTouchEnd={cancel}
-      onClick={e => e.stopPropagation()}
-      whileTap={{ scale:0.85 }}>
+        flexShrink:0, userSelect:"none", touchAction:"none" }}
+      onPointerDown={press} onPointerUp={cancel} onPointerCancel={cancel} onPointerLeave={cancel}
+      onClick={e => e.stopPropagation()}>
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}
         style={{ position:"absolute", inset:0, transform:"rotate(-90deg)" }}>
         <circle cx={SIZE/2} cy={SIZE/2} r={R} fill="none"
@@ -1470,9 +1470,10 @@ function Dashboard({ protocols: protos, setProtocols: setProtos, onOverlay }) {
   const [detailId,   setDetailId]   = useState(null);
   const [kintsugiId, setKintsugiId] = useState(null);
 
+  const hasOverlay = showAdd || !!detailId || !!kintsugiId;
   useEffect(() => {
-    onOverlay?.(showAdd || !!detailId || !!kintsugiId);
-  }, [showAdd, detailId, kintsugiId, onOverlay]);
+    onOverlay?.(hasOverlay);
+  }, [hasOverlay, onOverlay]);
   const [toast,      setToast]      = useState(null);
 
   const toast$ = msg => { setToast(msg); setTimeout(() => setToast(null), 2400); };
