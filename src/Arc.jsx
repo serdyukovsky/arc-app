@@ -2231,8 +2231,30 @@ export default function Arc() {
       left: Math.max(0, Math.round(vv?.offsetLeft || 0)),
     };
   });
-  const safeBottom = "max(env(safe-area-inset-bottom), 0px)";
-  const safeTop = "max(env(safe-area-inset-top), 0px)";
+  const [tgSafeArea, setTgSafeArea] = useState({ top: 0, bottom: 0 });
+
+  useEffect(() => {
+    const tg = getTelegramWebApp();
+    if (!tg) return;
+    const update = () => {
+      const sa = tg.safeAreaInset || {};
+      const csa = tg.contentSafeAreaInset || {};
+      setTgSafeArea({
+        top: (sa.top || 0) + (csa.top || 0),
+        bottom: (sa.bottom || 0) + (csa.bottom || 0),
+      });
+    };
+    update();
+    tg.onEvent?.("safeAreaChanged", update);
+    tg.onEvent?.("contentSafeAreaChanged", update);
+    return () => {
+      tg.offEvent?.("safeAreaChanged", update);
+      tg.offEvent?.("contentSafeAreaChanged", update);
+    };
+  }, []);
+
+  const safeBottom = tgSafeArea.bottom ? `${tgSafeArea.bottom}px` : "max(env(safe-area-inset-bottom), 0px)";
+  const safeTop = tgSafeArea.top ? `${tgSafeArea.top}px` : "max(env(safe-area-inset-top), 0px)";
   const HEADER_H = 68;
   const TABBAR_H = 88;
   const FRAME_W = "min(430px, 100vw)";
