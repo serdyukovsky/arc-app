@@ -64,18 +64,22 @@ function getTelegramWebApp() {
 }
 
 function triggerHaptic(kind = "light") {
-  const tg = getTelegramWebApp();
-  if (tg?.HapticFeedback) {
-    if (kind === "success") tg.HapticFeedback.notificationOccurred("success");
-    else if (kind === "warning") tg.HapticFeedback.notificationOccurred("warning");
-    else tg.HapticFeedback.impactOccurred("light");
-    return;
-  }
   try {
-    navigator.vibrate(kind === "success" ? [12, 18, 28] : 20);
+    const tg = getTelegramWebApp();
+    const hf = tg?.HapticFeedback;
+    if (hf) {
+      if (kind === "success") hf.notificationOccurred("success");
+      else if (kind === "warning") hf.notificationOccurred("warning");
+      else if (kind === "medium") hf.impactOccurred("medium");
+      else if (kind === "heavy") hf.impactOccurred("heavy");
+      else if (kind === "selection") hf.selectionChanged();
+      else hf.impactOccurred("light");
+      return;
+    }
   } catch {
-    // no-op
+    // fallback below
   }
+  try { navigator.vibrate?.(kind === "success" ? [12, 18, 28] : 20); } catch {}
 }
 
 function normalizeDateKey(value, fallback) {
@@ -708,8 +712,8 @@ function LPButton({ done, hasScar, kintsugi: isK, protoColor, onComplete, onUndo
   const press = useCallback(e => {
     e.stopPropagation();
     e.preventDefault();
-    if (done) { triggerHaptic("light"); onUndo?.(); return; }
-    triggerHaptic("light");
+    if (done) { triggerHaptic("medium"); onUndo?.(); return; }
+    triggerHaptic("medium");
     setOn(true); setProg(0);
     t0.current = performance.now();
     const tick = now => {
