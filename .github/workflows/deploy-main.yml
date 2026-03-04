@@ -36,6 +36,8 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_PB_URL: https://gidmate.ru/pb
 
       - name: Validate deploy secrets
         run: |

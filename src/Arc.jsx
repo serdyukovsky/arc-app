@@ -63,16 +63,10 @@ function getTelegramWebApp() {
   return window.Telegram?.WebApp ?? null;
 }
 
-// DEBUG: temporary — remove after testing
-let _hapticDebug = [];
-function getHapticDebug() { const r = [..._hapticDebug]; _hapticDebug = []; return r; }
-
 function triggerHaptic(kind = "light") {
   try {
     const tg = getTelegramWebApp();
     const hf = tg?.HapticFeedback;
-    const ver = tg?.version || "?";
-    _hapticDebug.push(`tg=${!!tg} hf=${!!hf} v=${ver} kind=${kind}`);
     if (hf) {
       if (kind === "success") hf.notificationOccurred("success");
       else if (kind === "warning") hf.notificationOccurred("warning");
@@ -82,8 +76,8 @@ function triggerHaptic(kind = "light") {
       else hf.impactOccurred("light");
       return;
     }
-  } catch (err) {
-    _hapticDebug.push(`ERR: ${err.message}`);
+  } catch {
+    // fallback below
   }
   try { navigator.vibrate?.(kind === "success" ? [12, 18, 28] : 20); } catch {}
 }
@@ -1519,7 +1513,7 @@ function Dashboard({ protocols: protos, setProtocols: setProtos, onOverlay }) {
       logs[todayKey] = { ...(logs[todayKey] || {}), [hid]: true };
       return { ...p, logs };
     });
-    toast$("Выполнено | " + getHapticDebug().join(" / "));
+    toast$("Выполнено");
   };
 
   const undoHabit = (pid, hid) => {
