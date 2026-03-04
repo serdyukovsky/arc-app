@@ -801,7 +801,9 @@ function ProtocolDetail({ proto, onBack, onKintsugi }) {
 
   return (
     <motion.div
-      style={{ position:"fixed", inset:0, background:T.bg, zIndex:100,
+      style={{ position:"fixed", top:"var(--arc-frame-top, 0px)", left:"var(--arc-frame-left, 0px)",
+        width:"var(--arc-frame-width, 100vw)", height:"var(--arc-frame-height, 100dvh)",
+        background:T.bg, zIndex:100,
         overflowY:"auto", display:"flex", flexDirection:"column", alignItems:"center" }}
       initial={{ x:"100%" }} animate={{ x:0 }} exit={{ x:"100%" }}
       transition={{ duration:0.35, ease:[0.16,1,0.3,1] }}>
@@ -1335,10 +1337,11 @@ function AddSheet({ existingNames, usedColors, onAdd, onClose }) {
       <button disabled={!cName.trim()}
         onClick={() => {
           const startDate = today();
+          const prepared = cH.map(h => h.trim()).filter(Boolean);
+          const habitNames = prepared.length > 0 ? prepared : ["Новая привычка"];
           onAdd({ id:uid(), name:cName.trim(), colorId, startDate,
-            habits: cH.filter(h=>h.trim()).map(name=>({id:uid(), name, startDate, archivedAt:null })),
+            habits: habitNames.map(name=>({id:uid(), name, startDate, archivedAt:null })),
             logs:{}, kintsugi:[] });
-          onClose();
         }}
         style={{ width:"100%", padding:14, borderRadius:12, border:"none",
           background: cName.trim() ? T.hi : T.s2,
@@ -1636,14 +1639,19 @@ function Dashboard({ protocols: protos, setProtocols: setProtos }) {
                 justifyContent:"space-between", padding:"0 4px 12px" }}>
               <span style={{ fontFamily:"monospace", fontSize:10, color:T.lo,
                 letterSpacing:"0.16em" }}>ПРОТОКОЛЫ</span>
-              <motion.button onClick={() => canAddProtocol && setShowAdd(true)}
-                disabled={!canAddProtocol}
+              <motion.button onClick={() => {
+                if (!canAddProtocol) {
+                  toast$(`Лимит: ${MAX_PROTOCOLS} протоколов`);
+                  return;
+                }
+                setShowAdd(true);
+              }}
                 style={{ display:"flex", alignItems:"center", gap:5,
                   padding:"4px 10px", borderRadius:8, border:`1px solid ${T.border}`,
                   background:"transparent",
                   color: canAddProtocol ? T.mid : T.lo,
                   fontSize:12,
-                  cursor: canAddProtocol ? "pointer" : "not-allowed",
+                  cursor:"pointer",
                   opacity: canAddProtocol ? 1 : 0.55 }}
                 whileHover={{ borderColor:T.borderHi, color:T.hi }}
                 whileTap={{ scale:0.94 }}>
@@ -1697,14 +1705,15 @@ function Dashboard({ protocols: protos, setProtocols: setProtos }) {
         {showAdd && (
           <>
             <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-              style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.72)", zIndex:40 }}
+              style={{ position:"fixed", top:"var(--arc-frame-top, 0px)", left:"var(--arc-frame-left, 0px)",
+                width:"var(--arc-frame-width, 100vw)", height:"var(--arc-frame-height, 100dvh)",
+                background:"rgba(0,0,0,0.72)", zIndex:40 }}
               onClick={() => setShowAdd(false)}/>
             <motion.div
               initial={{ y:"100%" }} animate={{ y:0 }} exit={{ y:"100%" }}
               transition={{ duration:0.38, ease:[0.16,1,0.3,1] }}
-              style={{ position:"fixed", bottom:0, left:"50%",
-                transform:"translateX(-50%)",
-                width:"100%", maxWidth:430,
+              style={{ position:"fixed", bottom:"max(env(safe-area-inset-bottom), 0px)", left:"var(--arc-frame-left, 0px)",
+                width:"var(--arc-frame-width, 100vw)",
                 borderRadius:"20px 20px 0 0",
                 background:T.s1, border:`1px solid ${T.border}`,
                 zIndex:50, maxHeight:"75vh", overflowY:"auto" }}>
@@ -1712,7 +1721,14 @@ function Dashboard({ protocols: protos, setProtocols: setProtos }) {
                 existingNames={protos.map(p => p.name)}
                 usedColors={protos.map(p => p.colorId)}
                 onAdd={p => {
-                  setProtos(ps => (ps.length >= MAX_PROTOCOLS ? ps : [...ps, normalizeProtocol(p)]));
+                  if (protos.length >= MAX_PROTOCOLS) {
+                    toast$(`Лимит: ${MAX_PROTOCOLS} протоколов`);
+                    setShowAdd(false);
+                    return;
+                  }
+                  const normalized = normalizeProtocol(p);
+                  setProtos(prev => [normalized, ...prev]);
+                  toast$("Протокол создан");
                   setShowAdd(false);
                 }}
                 onClose={() => setShowAdd(false)}/>
@@ -1726,14 +1742,15 @@ function Dashboard({ protocols: protos, setProtocols: setProtos }) {
         {kintsugiProto && kintsugiDays.length > 0 && (
           <>
             <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-              style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.72)", zIndex:120 }}
+              style={{ position:"fixed", top:"var(--arc-frame-top, 0px)", left:"var(--arc-frame-left, 0px)",
+                width:"var(--arc-frame-width, 100vw)", height:"var(--arc-frame-height, 100dvh)",
+                background:"rgba(0,0,0,0.72)", zIndex:120 }}
               onClick={() => setKintsugiId(null)}/>
             <motion.div
               initial={{ y:"100%" }} animate={{ y:0 }} exit={{ y:"100%" }}
               transition={{ duration:0.34, ease:[0.16,1,0.3,1] }}
-              style={{ position:"fixed", bottom:0, left:"50%",
-                transform:"translateX(-50%)",
-                width:"100%", maxWidth:430,
+              style={{ position:"fixed", bottom:"max(env(safe-area-inset-bottom), 0px)", left:"var(--arc-frame-left, 0px)",
+                width:"var(--arc-frame-width, 100vw)",
                 borderRadius:"20px 20px 0 0",
                 background:T.s1, border:`1px solid ${T.border}`,
                 zIndex:121 }}>
@@ -1756,7 +1773,7 @@ function Dashboard({ protocols: protos, setProtocols: setProtos }) {
             animate={{ opacity:1, y:0, scale:1 }}
             exit={{ opacity:0, y:10, scale:0.96 }}
             transition={{ duration:0.26, ease:[0.16,1,0.3,1] }}
-            style={{ position:"fixed", bottom:36, left:"50%",
+            style={{ position:"fixed", bottom:36, left:"calc(var(--arc-frame-left, 0px) + (var(--arc-frame-width, 100vw) / 2))",
               transform:"translateX(-50%)", zIndex:60,
               padding:"10px 20px", borderRadius:12, whiteSpace:"nowrap",
               background:"#1C1C1C", border:`1px solid ${T.border}`,
@@ -2200,15 +2217,18 @@ export default function Arc() {
   const [tab, setTab] = useState("dash");
   // Lift protocols state so Analytics can read same data
   const [protos, setProtos] = useState(loadProtocols);
+  const userEditedRef = useRef(false);
   const [pbAuth, setPbAuth] = useState(loadPocketBaseAuth);
   const [pbReady, setPbReady] = useState(!PB_URL);
   const [storageReady, setStorageReady] = useState(false);
   const [viewport, setViewport] = useState(() => {
-    if (typeof window === "undefined") return { height: 800, top: 0 };
+    if (typeof window === "undefined") return { height: 800, top: 0, width: 430, left: 0 };
     const vv = window.visualViewport;
     return {
       height: Math.max(320, Math.round(vv?.height || window.innerHeight)),
       top: Math.max(0, Math.round(vv?.offsetTop || 0)),
+      width: Math.max(320, Math.round(vv?.width || window.innerWidth)),
+      left: Math.max(0, Math.round(vv?.offsetLeft || 0)),
     };
   });
   const safeBottom = "max(env(safe-area-inset-bottom), 0px)";
@@ -2216,6 +2236,8 @@ export default function Arc() {
   const HEADER_H = 68;
   const TABBAR_H = 88;
   const FRAME_W = "min(430px, 100vw)";
+  const frameWidth = Math.min(430, viewport.width);
+  const frameLeft = Math.max(0, Math.round(viewport.left + (viewport.width - frameWidth) / 2));
 
   useEffect(() => {
     const tg = getTelegramWebApp();
@@ -2231,9 +2253,16 @@ export default function Arc() {
       const next = {
         height: Math.max(320, Math.round(vv?.height || window.innerHeight)),
         top: Math.max(0, Math.round(vv?.offsetTop || 0)),
+        width: Math.max(320, Math.round(vv?.width || window.innerWidth)),
+        left: Math.max(0, Math.round(vv?.offsetLeft || 0)),
       };
       setViewport(prev => (
-        prev.height === next.height && prev.top === next.top ? prev : next
+        prev.height === next.height &&
+        prev.top === next.top &&
+        prev.width === next.width &&
+        prev.left === next.left
+          ? prev
+          : next
       ));
     };
     syncViewport();
@@ -2271,7 +2300,7 @@ export default function Arc() {
     (async () => {
       const fromPb = await loadProtocolsFromPocketBase(pbAuth.token);
       if (!active) return;
-      if (fromPb) setProtos(fromPb);
+      if (fromPb && !userEditedRef.current) setProtos(fromPb);
     })();
     return () => { active = false; };
   }, [pbReady, pbAuth?.token]);
@@ -2281,7 +2310,7 @@ export default function Arc() {
     (async () => {
       const fromCloud = await loadProtocolsFromCloudStorage();
       if (!active) return;
-      if (fromCloud) setProtos(fromCloud);
+      if (fromCloud && !userEditedRef.current) setProtos(fromCloud);
       setStorageReady(true);
     })();
     return () => { active = false; };
@@ -2301,9 +2330,17 @@ export default function Arc() {
     return activeHabitsOn(p, todayKey).filter(h => dl[h.id]);
   }).length;
   const integ  = allH.length ? Math.round((doneH / allH.length) * 100) : 0;
+  const setProtosFromUser = useCallback((updater) => {
+    userEditedRef.current = true;
+    setProtos(updater);
+  }, []);
 
   return (
     <div style={{ fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+      "--arc-frame-top": `${viewport.top}px`,
+      "--arc-frame-height": `${viewport.height}px`,
+      "--arc-frame-left": `${frameLeft}px`,
+      "--arc-frame-width": `${frameWidth}px`,
       position:"fixed", top:viewport.top, left:0, right:0,
       height:`min(100dvh, ${viewport.height}px)`,
       background:T.bg,
@@ -2332,7 +2369,7 @@ export default function Arc() {
           paddingTop:`calc(${HEADER_H}px + ${safeTop})`,
           paddingBottom:`calc(${TABBAR_H}px + ${safeBottom} + 12px)` }}>
         {tab === "dash" ? (
-          <Dashboard key="dash" protocols={protos} setProtocols={setProtos}/>
+          <Dashboard key="dash" protocols={protos} setProtocols={setProtosFromUser}/>
         ) : (
           <AnalyticsScreen key="analytics" protocols={protos}/>
         )}

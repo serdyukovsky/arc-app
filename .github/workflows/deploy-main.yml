@@ -1,0 +1,82 @@
+name: Deploy ARC (main)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_RELOAD_CMD: ${{ secrets.DEPLOY_RELOAD_CMD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Validate deploy secrets
+        run: |
+          set -eu
+          for key in DEPLOY_HOST DEPLOY_USER DEPLOY_PATH DEPLOY_SSH_KEY; do
+            if [ -z "${!key:-}" ]; then
+              echo "::error::$key is required"
+              exit 1
+            fi
+          done
+
+      - name: Prepare SSH
+        run: |
+          set -eu
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf "%s\n" "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          PORT="${DEPLOY_PORT:-22}"
+          ssh-keyscan -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Ensure remote path
+        run: |
+          set -eu
+          PORT="${DEPLOY_PORT:-22}"
+          ssh -p "$PORT" "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p '$DEPLOY_PATH'"
+
+      - name: Upload dist via rsync
+        run: |
+          set -eu
+          PORT="${DEPLOY_PORT:-22}"
+          rsync -az --delete \
+            -e "ssh -p $PORT" \
+            dist/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+
+      - name: Optional reload command
+        run: |
+          set -eu
+          if [ -n "${DEPLOY_RELOAD_CMD:-}" ]; then
+            PORT="${DEPLOY_PORT:-22}"
+            ssh -p "$PORT" "$DEPLOY_USER@$DEPLOY_HOST" "$DEPLOY_RELOAD_CMD"
+          else
+            echo "DEPLOY_RELOAD_CMD is empty, skip reload"
+          fi

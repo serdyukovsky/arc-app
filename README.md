@@ -47,3 +47,26 @@ It expects:
 1. `telegram-web-app.js` is already included in `index.html`.
 2. App calls `WebApp.ready()` and `WebApp.expand()` on startup.
 3. Haptics and BackButton are enabled when available.
+
+## CI/CD: auto-deploy from `main`
+
+Workflow file:
+`.github/workflows/deploy-main.yml`
+
+It runs on every push to `main`:
+1. `npm ci`
+2. `npm run build`
+3. uploads `dist/` to your server via SSH + rsync
+
+Set these GitHub repo secrets:
+1. `DEPLOY_HOST` - server host/IP
+2. `DEPLOY_PORT` - SSH port (optional, default `22`)
+3. `DEPLOY_USER` - SSH user
+4. `DEPLOY_SSH_KEY` - private SSH key (ed25519/rsa) for that user
+5. `DEPLOY_PATH` - target directory on server (e.g. `/var/www/arc-app`)
+6. `DEPLOY_RELOAD_CMD` - optional command after upload (e.g. `sudo systemctl reload nginx`)
+
+Recommended branch flow:
+1. work in `dev`
+2. merge `dev -> main` via PR
+3. deploy happens automatically from `main`
