@@ -52,7 +52,7 @@ jobs:
           set -eu
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf "%s\n" "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          echo "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           PORT="${DEPLOY_PORT:-22}"
           ssh-keyscan -p "$PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
