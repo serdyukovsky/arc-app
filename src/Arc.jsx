@@ -1465,10 +1465,14 @@ function KintsugiSheet({ proto, candidates, onPick, onClose }) {
 // ═══════════════════════════════════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════
-function Dashboard({ protocols: protos, setProtocols: setProtos }) {
+function Dashboard({ protocols: protos, setProtocols: setProtos, onOverlay }) {
   const [showAdd,    setShowAdd]    = useState(false);
   const [detailId,   setDetailId]   = useState(null);
   const [kintsugiId, setKintsugiId] = useState(null);
+
+  useEffect(() => {
+    onOverlay?.(showAdd || !!detailId || !!kintsugiId);
+  }, [showAdd, detailId, kintsugiId, onOverlay]);
   const [toast,      setToast]      = useState(null);
 
   const toast$ = msg => { setToast(msg); setTimeout(() => setToast(null), 2400); };
@@ -2232,6 +2236,7 @@ export default function Arc() {
     };
   });
   const [tgSafeArea, setTgSafeArea] = useState({ top: 0, bottom: 0 });
+  const [overlayOpen, setOverlayOpen] = useState(false);
 
   useEffect(() => {
     const tg = getTelegramWebApp();
@@ -2391,20 +2396,22 @@ export default function Arc() {
           paddingTop:`calc(${HEADER_H}px + ${safeTop})`,
           paddingBottom:`calc(${TABBAR_H}px + ${safeBottom} + 12px)` }}>
         {tab === "dash" ? (
-          <Dashboard key="dash" protocols={protos} setProtocols={setProtosFromUser}/>
+          <Dashboard key="dash" protocols={protos} setProtocols={setProtosFromUser} onOverlay={setOverlayOpen}/>
         ) : (
           <AnalyticsScreen key="analytics" protocols={protos}/>
         )}
         </div>
 
         {/* Tabbar overlay (no background block) */}
-        <div style={{ position:"absolute", left:0, right:0, bottom:0, zIndex:21,
-          background:"transparent",
-          paddingBottom:safeBottom,
-          pointerEvents:"none",
-          display:"flex", alignItems:"flex-end" }}>
-          <TabBar tab={tab} onTab={setTab}/>
-        </div>
+        {!overlayOpen && (
+          <div style={{ position:"absolute", left:0, right:0, bottom:0, zIndex:21,
+            background:"transparent",
+            paddingBottom:safeBottom,
+            pointerEvents:"none",
+            display:"flex", alignItems:"flex-end" }}>
+            <TabBar tab={tab} onTab={setTab}/>
+          </div>
+        )}
       </div>
     </div>
   );
