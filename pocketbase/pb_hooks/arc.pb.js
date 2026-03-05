@@ -44,8 +44,13 @@ routerAdd("POST", "/api/arc/telegram-auth", function(e) {
     if (idx < 0) return;
     var k = safeDecode(part.slice(0, idx));
     var v = safeDecode(part.slice(idx + 1));
-    if (k === "hash") hash = v;
-    else fields[k] = v;
+    if (k === "hash") {
+      hash = v;
+    } else if (k !== "signature") {
+      // Telegram may include "signature" (third-party validation field).
+      // It must be excluded from data_check_string for bot-token hash validation.
+      fields[k] = v;
+    }
   });
 
   if (!hash) return errorJson(401, "Invalid Telegram initData: missing hash");
@@ -56,9 +61,9 @@ routerAdd("POST", "/api/arc/telegram-auth", function(e) {
     .join("\n");
 
   // Telegram check:
-  // secret = HMAC_SHA256("WebAppData", bot_token)
+  // secret = HMAC_SHA256(bot_token, "WebAppData")
   // hash   = HMAC_SHA256(data_check_string, secret)
-  var secret = $security.hs256("WebAppData", botToken);
+  var secret = $security.hs256(botToken, "WebAppData");
   var actualHash = String($security.hs256(checkString, secret) || "").toLowerCase();
   var expectedHash = String(hash || "").toLowerCase();
 
