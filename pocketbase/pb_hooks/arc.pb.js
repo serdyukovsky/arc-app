@@ -328,22 +328,10 @@ routerAdd("POST", "/api/arc/telegram-auth", (e) => {
   if (!initData) throw new BadRequestError("InitData is required.");
 
   const botToken = $os.getenv("TELEGRAM_BOT_TOKEN");
-  if (!botToken) {
-    return e.json(500, {
-      status: 500,
-      message: "TELEGRAM_BOT_TOKEN is not configured",
-      data: {},
-    });
-  }
+  if (!botToken) throw new BadRequestError("TELEGRAM_BOT_TOKEN is not configured");
 
   const verified = verifyTelegramInitData(initData, botToken);
-  if (!verified.ok) {
-    return e.json(401, {
-      status: 401,
-      message: `Invalid Telegram initData: ${verified.reason}`,
-      data: {},
-    });
-  }
+  if (!verified.ok) throw new BadRequestError(`Invalid Telegram initData: ${verified.reason}`);
 
   const userRecord = findOrCreateTelegramUser(verified.user);
   return $apis.recordAuthResponse(e, userRecord, "telegram");
