@@ -324,20 +324,34 @@ function serializeStateValue(rawState) {
 }
 
 function errorJson(e, status, message) {
-  return e.json(status, { status, message, data: {} });
+  return e.json(status, {
+    status: status,
+    message: message,
+    data: {},
+  });
 }
 
-routerAdd("POST", "/api/arc/telegram-auth", (e) => {
-  const initData = extractInitDataFromRequest(e);
+routerAdd("POST", "/api/arc/telegram-auth", function(e) {
+  var body = new DynamicModel({ initData: "" });
+  try {
+    e.bindBody(body);
+  } catch {
+    // ignore body parse errors and validate below
+  }
+
+  var initData = String(body.initData || "").trim();
   if (!initData) return errorJson(e, 400, "InitData is required.");
 
-  const botToken = $os.getenv("TELEGRAM_BOT_TOKEN");
+  var botToken = $os.getenv("TELEGRAM_BOT_TOKEN");
   if (!botToken) return errorJson(e, 500, "TELEGRAM_BOT_TOKEN is not configured");
 
-  const verified = verifyTelegramInitData(initData, botToken);
-  if (!verified.ok) return errorJson(e, 401, `Invalid Telegram initData: ${verified.reason}`);
+  var verified = verifyTelegramInitData(initData, botToken);
+  if (!verified || !verified.ok) {
+    var reason = verified && verified.reason ? verified.reason : "unknown";
+    return errorJson(e, 401, "Invalid Telegram initData: " + reason);
+  }
 
-  const userRecord = findOrCreateTelegramUser(verified.user);
+  var userRecord = findOrCreateTelegramUser(verified.user);
   return $apis.recordAuthResponse(e, userRecord, "telegram");
 });
 
