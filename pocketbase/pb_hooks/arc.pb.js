@@ -17,7 +17,7 @@ routerAdd("POST", "/api/arc/telegram-auth", function(e) {
 
   function safeDecode(value) {
     try {
-      return decodeURIComponent(String(value || "").replace(/\+/g, "%20"));
+      return decodeURIComponent(String(value || ""));
     } catch (err) {
       return String(value || "");
     }
