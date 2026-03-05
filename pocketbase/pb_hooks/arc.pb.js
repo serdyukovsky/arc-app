@@ -199,6 +199,18 @@ function bytesToHex(bytes) {
   return bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+function timingSafeEqualStrings(left, right) {
+  const a = String(left || "");
+  const b = String(right || "");
+  if (a.length !== b.length) return false;
+
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= (a.charCodeAt(i) ^ b.charCodeAt(i));
+  }
+  return mismatch === 0;
+}
+
 function verifyTelegramInitData(initData, botToken) {
   const parsed = parseInitData(initData);
   if (!parsed.hash) return { ok: false, reason: "missing hash" };
@@ -215,7 +227,7 @@ function verifyTelegramInitData(initData, botToken) {
   const actualHash = bytesToHex(hmacSha256Bytes(utf8Bytes(checkString), secret)).toLowerCase();
   const expectedHash = String(parsed.hash || "").toLowerCase();
 
-  if (!$security.equal(actualHash, expectedHash)) {
+  if (!timingSafeEqualStrings(actualHash, expectedHash)) {
     return { ok: false, reason: "hash mismatch" };
   }
 
@@ -261,10 +273,28 @@ function findOrCreateTelegramUser(tgUser) {
 
   // Optional profile fields (if present in your auth collection).
   if (typeof tgUser.username === "string" && tgUser.username.length > 0) {
-    record.setIfFieldExists("username", tgUser.username.toLowerCase());
+    try {
+      record.setIfFieldExists("username", tgUser.username.toLowerCase());
+    } catch {
+      try {
+        record.set("username", tgUser.username.toLowerCase());
+      } catch {
+        // ignore optional field write errors
+      }
+    }
   }
   const fullName = [tgUser.first_name || "", tgUser.last_name || ""].join(" ").trim();
-  if (fullName) record.setIfFieldExists("name", fullName);
+  if (fullName) {
+    try {
+      record.setIfFieldExists("name", fullName);
+    } catch {
+      try {
+        record.set("name", fullName);
+      } catch {
+        // ignore optional field write errors
+      }
+    }
+  }
 
   try {
     $app.save(record);
