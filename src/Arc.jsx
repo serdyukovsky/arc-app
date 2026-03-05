@@ -1237,7 +1237,7 @@ function ProtocolCard({ proto, onComplete, onUndo, onAddHabit, onRemoveHabit,
           onKeyDown={e => e.key === "Enter" && submitHabit()}
           placeholder="Добавить привычку"
           style={{ flex:1, background:"transparent", border:"none", outline:"none",
-            color:T.mid, fontSize:13, fontFamily:"inherit", padding:"2px 0" }}/>
+            color:T.mid, fontSize:16, fontFamily:"inherit", padding:"2px 0" }}/>
         <AnimatePresence>
           {newH.trim() && (
             <motion.button
@@ -1381,14 +1381,14 @@ function AddSheet({ existingNames, usedColors, onAdd, onClose }) {
         placeholder="Название"
         style={{ width:"100%", boxSizing:"border-box", padding:"12px 14px",
           borderRadius:10, background:T.s2, border:`1px solid ${T.border}`,
-          color:T.hi, fontSize:14, outline:"none", marginBottom:12, fontFamily:"inherit" }}/>
+          color:T.hi, fontSize:16, outline:"none", marginBottom:12, fontFamily:"inherit" }}/>
       <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:12 }}>
         {cH.map((h, i) => (
           <div key={i} style={{ display:"flex", gap:8 }}>
             <input value={h} onChange={e => { const n=[...cH]; n[i]=e.target.value; setCH(n); }}
               placeholder={`Привычка ${i+1}`}
               style={{ flex:1, padding:"11px 14px", borderRadius:10, background:T.s2,
-                border:`1px solid ${T.border}`, color:T.hi, fontSize:14, outline:"none",
+                border:`1px solid ${T.border}`, color:T.hi, fontSize:16, outline:"none",
                 fontFamily:"inherit" }}/>
             {cH.length > 1 && (
               <button onClick={() => setCH(cH.filter((_,j) => j!==i))}
