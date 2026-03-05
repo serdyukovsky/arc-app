@@ -330,7 +330,8 @@ routerAdd("POST", "/api/arc/telegram-auth", function(e) {
 routerAdd("GET", "/api/arc/state", function(e) {
   var stateRecord = null;
   try {
-    stateRecord = $app.findFirstRecordByFilter("arc_state", "user = {:uid}", { uid: e.auth.id });
+    // Keep one state record per user, keyed by the same record id.
+    stateRecord = $app.findRecordById("arc_state", e.auth.id);
   } catch (err) {
     // no state yet
   }
@@ -386,16 +387,34 @@ routerAdd("POST", "/api/arc/state", function(e) {
   var collection = $app.findCollectionByNameOrId("arc_state");
   var stateRecord = null;
   try {
-    stateRecord = $app.findFirstRecordByFilter("arc_state", "user = {:uid}", { uid: e.auth.id });
+    stateRecord = $app.findRecordById("arc_state", e.auth.id);
   } catch (err) {
     // create below
   }
 
-  if (!stateRecord) stateRecord = new Record(collection);
+  if (!stateRecord) {
+    stateRecord = new Record(collection);
+    // deterministic id => stable upsert semantics and no relation-filter edge cases
+    stateRecord.set("id", e.auth.id);
+  }
 
   stateRecord.set("user", e.auth.id);
   stateRecord.set("state", state);
-  $app.save(stateRecord);
+
+  try {
+    $app.save(stateRecord);
+  } catch (err) {
+    // Concurrent first writes may race on id/user uniqueness.
+    // Retry as update of the canonical id record.
+    try {
+      var existing = $app.findRecordById("arc_state", e.auth.id);
+      existing.set("user", e.auth.id);
+      existing.set("state", state);
+      $app.save(existing);
+    } catch (err2) {
+      return errorJson(400, "state save failed");
+    }
+  }
 
   return e.json(200, { ok: true });
 }, $apis.requireAuth("users"));
