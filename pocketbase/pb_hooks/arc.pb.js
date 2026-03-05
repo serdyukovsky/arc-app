@@ -64,36 +64,14 @@ function parseInitData(initData) {
 }
 
 function extractInitDataFromRequest(e) {
-  const raw = toString(e.request.body || "").trim();
-  if (!raw) return "";
-
-  // JSON payload: { "initData": "..." } or { "init_data": "..." }
-  if (raw.startsWith("{")) {
-    try {
-      const parsed = JSON.parse(raw);
-      const jsonInitData = parsed?.initData ?? parsed?.init_data;
-      if (typeof jsonInitData === "string") return jsonInitData.trim();
-    } catch {
-      // fallthrough to other parsers
-    }
+  const body = new DynamicModel({ initData: "", init_data: "" });
+  try {
+    e.bindBody(body);
+  } catch {
+    // ignore bind errors, fallback below
   }
-
-  // Form payload: initData=... or init_data=...
-  const formPairs = String(raw).split("&");
-  for (const part of formPairs) {
-    if (!part) continue;
-    const idx = part.indexOf("=");
-    if (idx < 0) continue;
-    const key = safeDecode(part.slice(0, idx));
-    if (key !== "initData" && key !== "init_data") continue;
-    return safeDecode(part.slice(idx + 1)).trim();
-  }
-
-  // Fallback: raw initData string itself.
-  if (raw.includes("hash=") && raw.includes("auth_date=")) {
-    return raw;
-  }
-
+  const fromBody = String(body.initData || body.init_data || "").trim();
+  if (fromBody) return fromBody;
   return "";
 }
 
