@@ -402,9 +402,17 @@ async function cloudGetItem(key) {
   const tg = getTelegramWebApp();
   if (!tg?.CloudStorage) return null;
   return new Promise(resolve => {
+    let done = false;
+    const finish = (value) => {
+      if (done) return;
+      done = true;
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish(null), 1500);
     tg.CloudStorage.getItem(key, (err, value) => {
+      clearTimeout(timer);
       if (err) return resolve(null);
-      resolve(typeof value === "string" && value.length > 0 ? value : null);
+      finish(typeof value === "string" && value.length > 0 ? value : null);
     });
   });
 }
@@ -413,7 +421,17 @@ async function cloudSetItem(key, value) {
   const tg = getTelegramWebApp();
   if (!tg?.CloudStorage) return false;
   return new Promise(resolve => {
-    tg.CloudStorage.setItem(key, value, (err) => resolve(!err));
+    let done = false;
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      resolve(ok);
+    };
+    const timer = setTimeout(() => finish(false), 1500);
+    tg.CloudStorage.setItem(key, value, (err) => {
+      clearTimeout(timer);
+      finish(!err);
+    });
   });
 }
 
@@ -2382,8 +2400,11 @@ export default function Arc() {
   }, []);
 
   useEffect(() => {
-    if (!storageReady) return;
-    void persistProtocols(protos);
+    if (storageReady) void persistProtocols(protos);
+
+    // Avoid overwriting remote state before first PB/cloud hydration,
+    // but allow immediate saves after any user edits.
+    if (!userEditedRef.current && !pbHydratedRef.current) return;
     if (!pbReady || !pbAuth?.token) return;
     let active = true;
     (async () => {
