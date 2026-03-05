@@ -299,6 +299,10 @@ const PB_URL = (import.meta.env.VITE_PB_URL || "").replace(/\/+$/, "");
 const PB_TOKEN_KEY = "arc.pb.token";
 const PB_RECORD_KEY = "arc.pb.record";
 
+function isPocketBaseUnauthorized(status) {
+  return status === 401 || status === 403;
+}
+
 function getTelegramInitData() {
   const tg = getTelegramWebApp();
   if (!tg?.initData) return "";
@@ -331,47 +335,62 @@ function savePocketBaseAuth(auth) {
 }
 
 async function pocketBaseRequest(path, { method = "GET", token, body } = {}) {
-  if (!PB_URL) return null;
+  if (!PB_URL) return { ok: false, status: 0, data: null };
   try {
-    const headers = { "Content-Type": "application/json" };
+    const headers = {};
+    if (typeof body !== "undefined") headers["Content-Type"] = "application/json";
     if (token) headers.Authorization = `Bearer ${token}`;
     const res = await fetch(`${PB_URL}${path}`, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (!res.ok) return null;
-    return await res.json();
+    let data = null;
+    try {
+      data = await res.json();
+    } catch {
+      // empty body / non-json
+    }
+    return { ok: res.ok, status: res.status, data };
   } catch {
-    return null;
+    return { ok: false, status: 0, data: null };
   }
 }
 
 async function authPocketBaseWithTelegram(initData) {
   if (!PB_URL || !initData) return null;
-  const auth = await pocketBaseRequest("/api/arc/telegram-auth", {
+  const response = await pocketBaseRequest("/api/arc/telegram-auth", {
     method: "POST",
     body: { initData },
   });
+  const auth = response.data;
+  if (!response.ok) return null;
   if (!auth?.token || !auth?.record?.id) return null;
   return { token: auth.token, record: auth.record };
 }
 
 async function loadProtocolsFromPocketBase(token) {
-  if (!PB_URL || !token) return null;
-  const payload = await pocketBaseRequest("/api/arc/state", { token });
-  if (!payload?.state || typeof payload.state !== "string") return null;
-  return parseStoredProtocols(payload.state);
+  if (!PB_URL || !token) return { protocols: null, unauthorized: false };
+  const response = await pocketBaseRequest("/api/arc/state", { token });
+  if (!response.ok) {
+    return { protocols: null, unauthorized: isPocketBaseUnauthorized(response.status) };
+  }
+  const state = response.data?.state;
+  if (state === null || typeof state === "undefined") {
+    return { protocols: null, unauthorized: false };
+  }
+  return { protocols: parseStoredProtocols(state), unauthorized: false };
 }
 
 async function persistProtocolsToPocketBase(token, protos) {
-  if (!PB_URL || !token) return;
+  if (!PB_URL || !token) return { ok: false, unauthorized: false };
   const state = JSON.stringify(protos);
-  await pocketBaseRequest("/api/arc/state", {
+  const response = await pocketBaseRequest("/api/arc/state", {
     method: "POST",
     token,
     body: { state },
   });
+  return { ok: response.ok, unauthorized: isPocketBaseUnauthorized(response.status) };
 }
 
 async function cloudGetItem(key) {
@@ -394,9 +413,9 @@ async function cloudSetItem(key, value) {
 }
 
 function parseStoredProtocols(raw) {
-  if (!raw) return null;
+  if (raw === null || typeof raw === "undefined" || raw === "") return null;
   try {
-    const parsed = JSON.parse(raw);
+    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
     if (!Array.isArray(parsed)) return null;
     return parsed.map(normalizeProtocol);
   } catch {
@@ -2227,6 +2246,7 @@ export default function Arc() {
   // Lift protocols state so Analytics can read same data
   const [protos, setProtos] = useState(loadProtocols);
   const userEditedRef = useRef(false);
+  const pbHydratedRef = useRef(false);
   const [pbAuth, setPbAuth] = useState(loadPocketBaseAuth);
   const [pbReady, setPbReady] = useState(!PB_URL);
   const [storageReady, setStorageReady] = useState(false);
@@ -2330,9 +2350,17 @@ export default function Arc() {
     if (!pbReady || !pbAuth?.token) return;
     let active = true;
     (async () => {
-      const fromPb = await loadProtocolsFromPocketBase(pbAuth.token);
+      const pbState = await loadProtocolsFromPocketBase(pbAuth.token);
       if (!active) return;
-      if (fromPb && !userEditedRef.current) setProtos(fromPb);
+      if (pbState.unauthorized) {
+        setPbAuth(null);
+        savePocketBaseAuth(null);
+        return;
+      }
+      if (pbState.protocols && !userEditedRef.current) {
+        pbHydratedRef.current = true;
+        setProtos(pbState.protocols);
+      }
     })();
     return () => { active = false; };
   }, [pbReady, pbAuth?.token]);
@@ -2342,7 +2370,7 @@ export default function Arc() {
     (async () => {
       const fromCloud = await loadProtocolsFromCloudStorage();
       if (!active) return;
-      if (fromCloud && !userEditedRef.current) setProtos(fromCloud);
+      if (fromCloud && !userEditedRef.current && !pbHydratedRef.current) setProtos(fromCloud);
       setStorageReady(true);
     })();
     return () => { active = false; };
@@ -2351,8 +2379,18 @@ export default function Arc() {
   useEffect(() => {
     if (!storageReady) return;
     void persistProtocols(protos);
-    if (pbAuth?.token) void persistProtocolsToPocketBase(pbAuth.token, protos);
-  }, [protos, storageReady, pbAuth?.token]);
+    if (!pbReady || !pbAuth?.token) return;
+    let active = true;
+    (async () => {
+      const result = await persistProtocolsToPocketBase(pbAuth.token, protos);
+      if (!active) return;
+      if (result.unauthorized) {
+        setPbAuth(null);
+        savePocketBaseAuth(null);
+      }
+    })();
+    return () => { active = false; };
+  }, [protos, storageReady, pbReady, pbAuth?.token]);
 
   // Global integrity for fixed header
   const todayKey = today();

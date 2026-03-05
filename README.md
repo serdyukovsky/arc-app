@@ -42,6 +42,17 @@ It expects:
    - `state` json/text (required)
 3. env var `TELEGRAM_BOT_TOKEN`
 
+### PocketBase production checklist
+
+1. Copy updated hook to server: `pb_hooks/arc.pb.js` and restart PocketBase.
+2. Ensure PocketBase process has `TELEGRAM_BOT_TOKEN` in environment.
+3. Confirm `users` auth collection exists.
+4. Confirm `arc_state.user` relation is unique (one state per user).
+5. Expose PocketBase URL to frontend build via `VITE_PB_URL` (for example `https://your-domain/pb`).
+6. In Telegram Mini App, verify auth endpoint works:
+   - `POST /api/arc/telegram-auth` returns `token` + `record.id`
+   - `GET /api/arc/state` with bearer token returns `{ state: ... }`
+
 ### Telegram setup notes
 
 1. `telegram-web-app.js` is already included in `index.html`.
