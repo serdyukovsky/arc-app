@@ -143,6 +143,24 @@ function normalizeProtocol(raw) {
   };
 }
 
+function sanitizeProtocolsArray(value) {
+  if (!Array.isArray(value)) return null;
+  const out = [];
+  const seen = new Set();
+  for (const raw of value) {
+    // Skip malformed entries instead of creating fallback "Новый протокол".
+    if (!raw || typeof raw !== "object") continue;
+    if (typeof raw.name !== "string" || raw.name.trim().length === 0) continue;
+    if (!Array.isArray(raw.habits)) continue;
+    const normalized = normalizeProtocol(raw);
+    if (seen.has(normalized.id)) continue;
+    seen.add(normalized.id);
+    out.push(normalized);
+    if (out.length >= MAX_PROTOCOLS) break;
+  }
+  return out;
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // DEMO DATA — rich test data with varied start dates
 // ═══════════════════════════════════════════════════════════════════════
@@ -288,8 +306,9 @@ function loadProtocols() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return initProtocols();
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return initProtocols();
-    return parsed.map(normalizeProtocol);
+    const sanitized = sanitizeProtocolsArray(parsed);
+    if (sanitized === null) return initProtocols();
+    return sanitized;
   } catch {
     return initProtocols();
   }
@@ -439,8 +458,7 @@ function parseStoredProtocols(raw) {
   if (raw === null || typeof raw === "undefined" || raw === "") return null;
   try {
     const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-    if (!Array.isArray(parsed)) return null;
-    return parsed.map(normalizeProtocol);
+    return sanitizeProtocolsArray(parsed);
   } catch {
     return null;
   }
@@ -1329,11 +1347,19 @@ function AddSheet({ existingNames, usedColors, onAdd, onClose }) {
   const [mode,    setMode]    = useState("list");
   const [cName,   setCName]   = useState("");
   const [cH,      setCH]      = useState([""]);
+  const [creating, setCreating] = useState(false);
   const [colorId, setColorId] = useState(() => {
     // auto-pick first unused color
     return PALETTE.find(c => !usedColors.includes(c.id))?.id || PALETTE[0].id;
   });
   const avail = TEMPLATES.filter(t => !existingNames.includes(t.name));
+
+  const submitAdd = (proto) => {
+    if (creating) return;
+    setCreating(true);
+    onAdd(proto);
+    onClose();
+  };
 
   if (mode === "custom") return (
     <div style={{ padding:20 }}>
@@ -1385,15 +1411,15 @@ function AddSheet({ existingNames, usedColors, onAdd, onClose }) {
           const startDate = today();
           const prepared = cH.map(h => h.trim()).filter(Boolean);
           const habitNames = prepared.length > 0 ? prepared : ["Новая привычка"];
-          onAdd({ id:uid(), name:cName.trim(), colorId, startDate,
+          submitAdd({ id:uid(), name:cName.trim(), colorId, startDate,
             habits: habitNames.map(name=>({id:uid(), name, startDate, archivedAt:null })),
             logs:{}, kintsugi:[] });
         }}
         style={{ width:"100%", padding:14, borderRadius:12, border:"none",
-          background: cName.trim() ? T.hi : T.s2,
-          color: cName.trim() ? T.bg : T.lo,
+          background: cName.trim() && !creating ? T.hi : T.s2,
+          color: cName.trim() && !creating ? T.bg : T.lo,
           fontSize:14, fontWeight:600,
-          cursor: cName.trim() ? "pointer" : "not-allowed" }}>
+          cursor: cName.trim() && !creating ? "pointer" : "not-allowed" }}>
         Создать
       </button>
       <div style={{ height:32 }}/>
@@ -1423,7 +1449,7 @@ function AddSheet({ existingNames, usedColors, onAdd, onClose }) {
 
       {avail.map(t => (
         <motion.div key={t.tid}
-          onClick={() => { onAdd(mkProtocol(t, colorId)); onClose(); }}
+          onClick={() => submitAdd(mkProtocol(t, colorId))}
           style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
             padding:"12px 14px", borderRadius:12, cursor:"pointer",
             background:T.s2, border:`1px solid ${T.border}`, marginBottom:8 }}
@@ -1778,7 +1804,7 @@ function Dashboard({ protocols: protos, setProtocols: setProtos, onOverlay }) {
                     return;
                   }
                   const normalized = normalizeProtocol(p);
-                  setProtos(prev => [normalized, ...prev]);
+                  setProtos(prev => [normalized, ...prev].slice(0, MAX_PROTOCOLS));
                   toast$("Протокол создан");
                   setShowAdd(false);
                 }}
