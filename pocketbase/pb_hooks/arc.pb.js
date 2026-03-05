@@ -193,37 +193,64 @@ routerAdd("POST", "/api/arc/telegram-auth", function(e) {
   if (!botToken) return errorJson(500, "TELEGRAM_BOT_TOKEN is not configured");
 
   var fields = {};
+  var fieldsWithSignature = {};
+  var rawFields = {};
+  var rawFieldsWithSignature = {};
   var hash = "";
   initData.split("&").forEach(function(part) {
     if (!part) return;
     var idx = part.indexOf("=");
     if (idx < 0) return;
-    var k = safeDecode(part.slice(0, idx));
-    var v = safeDecode(part.slice(idx + 1));
+    var rawK = part.slice(0, idx);
+    var rawV = part.slice(idx + 1);
+    var k = safeDecode(rawK);
+    var v = safeDecode(rawV);
     if (k === "hash") {
       hash = v;
-    } else if (k !== "signature") {
-      // Telegram may include "signature" (third-party validation field).
-      // It must be excluded from data_check_string for bot-token hash validation.
-      fields[k] = v;
+    } else {
+      fieldsWithSignature[k] = v;
+      rawFieldsWithSignature[rawK] = rawV;
+      if (k !== "signature") {
+        // Telegram may include "signature" (third-party validation field).
+        // It is excluded in the canonical bot-token validation variant.
+        fields[k] = v;
+        rawFields[rawK] = rawV;
+      }
     }
   });
 
   if (!hash) return errorJson(401, "Invalid Telegram initData: missing hash");
 
-  var checkString = Object.keys(fields)
-    .sort()
-    .map(function(k) { return k + "=" + fields[k]; })
-    .join("\n");
+  function buildCheckString(obj) {
+    return Object.keys(obj)
+      .sort()
+      .map(function(k) { return k + "=" + obj[k]; })
+      .join("\n");
+  }
 
-  // Telegram check:
-  // secret = HMAC_SHA256(bot_token, "WebAppData")
-  // hash   = HMAC_SHA256(data_check_string, secret)
-  var secret = hmacSha256Bytes(utf8Bytes(botToken), utf8Bytes("WebAppData"));
-  var actualHash = bytesToHex(hmacSha256Bytes(utf8Bytes(checkString), secret)).toLowerCase();
+  function calcTelegramHash(checkString, token) {
+    var secret = hmacSha256Bytes(utf8Bytes(token), utf8Bytes("WebAppData"));
+    return bytesToHex(hmacSha256Bytes(utf8Bytes(checkString), secret)).toLowerCase();
+  }
+
   var expectedHash = String(hash || "").toLowerCase();
+  var checkVariants = [
+    buildCheckString(fields),
+    buildCheckString(rawFields),
+    buildCheckString(fieldsWithSignature),
+    buildCheckString(rawFieldsWithSignature),
+  ];
 
-  if (!timingSafeEqualStrings(actualHash, expectedHash)) {
+  var isValidHash = false;
+  for (var cv = 0; cv < checkVariants.length; cv++) {
+    var candidate = calcTelegramHash(checkVariants[cv], botToken);
+    if (timingSafeEqualStrings(candidate, expectedHash)) {
+      isValidHash = true;
+      break;
+    }
+  }
+
+  if (!isValidHash) {
     return errorJson(401, "Invalid Telegram initData: hash mismatch");
   }
 
