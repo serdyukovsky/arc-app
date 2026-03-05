@@ -323,15 +323,19 @@ function serializeStateValue(rawState) {
   }
 }
 
+function errorJson(e, status, message) {
+  return e.json(status, { status, message, data: {} });
+}
+
 routerAdd("POST", "/api/arc/telegram-auth", (e) => {
   const initData = extractInitDataFromRequest(e);
-  if (!initData) throw new BadRequestError("InitData is required.");
+  if (!initData) return errorJson(e, 400, "InitData is required.");
 
   const botToken = $os.getenv("TELEGRAM_BOT_TOKEN");
-  if (!botToken) throw new BadRequestError("TELEGRAM_BOT_TOKEN is not configured");
+  if (!botToken) return errorJson(e, 500, "TELEGRAM_BOT_TOKEN is not configured");
 
   const verified = verifyTelegramInitData(initData, botToken);
-  if (!verified.ok) throw new BadRequestError(`Invalid Telegram initData: ${verified.reason}`);
+  if (!verified.ok) return errorJson(e, 401, `Invalid Telegram initData: ${verified.reason}`);
 
   const userRecord = findOrCreateTelegramUser(verified.user);
   return $apis.recordAuthResponse(e, userRecord, "telegram");
@@ -351,7 +355,7 @@ routerAdd("POST", "/api/arc/state", (e) => {
   e.bindBody(body);
 
   const state = serializeStateValue(body.state);
-  if (!state) throw new BadRequestError("state is required");
+  if (!state) return errorJson(e, 400, "state is required");
 
   const collection = $app.findCollectionByNameOrId("arc_state");
   let stateRecord = findStateRecordByUserId(e.auth.id);
