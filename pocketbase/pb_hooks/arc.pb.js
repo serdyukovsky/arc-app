@@ -56,9 +56,9 @@ routerAdd("POST", "/api/arc/telegram-auth", function(e) {
     .join("\n");
 
   // Telegram check:
-  // secret = HMAC_SHA256(bot_token, "WebAppData")
+  // secret = HMAC_SHA256("WebAppData", bot_token)
   // hash   = HMAC_SHA256(data_check_string, secret)
-  var secret = $security.hs256(botToken, "WebAppData");
+  var secret = $security.hs256("WebAppData", botToken);
   var actualHash = String($security.hs256(checkString, secret) || "").toLowerCase();
   var expectedHash = String(hash || "").toLowerCase();
 
