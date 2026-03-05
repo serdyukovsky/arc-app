@@ -305,8 +305,13 @@ function isPocketBaseUnauthorized(status) {
 
 function getTelegramInitData() {
   const tg = getTelegramWebApp();
-  if (!tg?.initData) return "";
-  return tg.initData;
+  const fromTg = typeof tg?.initData === "string" ? tg.initData.trim() : "";
+  if (fromTg) return fromTg;
+  if (typeof window !== "undefined") {
+    const fromUrl = new URLSearchParams(window.location.search).get("tgWebAppData");
+    if (typeof fromUrl === "string" && fromUrl.trim()) return fromUrl.trim();
+  }
+  return "";
 }
 
 function loadPocketBaseAuth() {

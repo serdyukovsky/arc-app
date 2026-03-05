@@ -63,6 +63,40 @@ function parseInitData(initData) {
   return { fields, hash };
 }
 
+function extractInitDataFromRequest(e) {
+  const raw = toString(e.request.body || "").trim();
+  if (!raw) return "";
+
+  // JSON payload: { "initData": "..." } or { "init_data": "..." }
+  if (raw.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(raw);
+      const jsonInitData = parsed?.initData ?? parsed?.init_data;
+      if (typeof jsonInitData === "string") return jsonInitData.trim();
+    } catch {
+      // fallthrough to other parsers
+    }
+  }
+
+  // Form payload: initData=... or init_data=...
+  const formPairs = String(raw).split("&");
+  for (const part of formPairs) {
+    if (!part) continue;
+    const idx = part.indexOf("=");
+    if (idx < 0) continue;
+    const key = safeDecode(part.slice(0, idx));
+    if (key !== "initData" && key !== "init_data") continue;
+    return safeDecode(part.slice(idx + 1)).trim();
+  }
+
+  // Fallback: raw initData string itself.
+  if (raw.includes("hash=") && raw.includes("auth_date=")) {
+    return raw;
+  }
+
+  return "";
+}
+
 function utf8Bytes(text) {
   const str = String(text || "");
   const bytes = [];
@@ -282,11 +316,8 @@ function serializeStateValue(rawState) {
 }
 
 routerAdd("POST", "/api/arc/telegram-auth", (e) => {
-  const body = new DynamicModel({ initData: "" });
-  e.bindBody(body);
-
-  const initData = String(body.initData || "").trim();
-  if (!initData) throw new BadRequestError("initData is required");
+  const initData = extractInitDataFromRequest(e);
+  if (!initData) throw new BadRequestError("InitData is required.");
 
   const botToken = $os.getenv("TELEGRAM_BOT_TOKEN");
   if (!botToken) throw new InternalServerError("TELEGRAM_BOT_TOKEN is not configured");
