@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Habit, HabitType, Category } from '@/types'
 import { triggerHaptic } from '@/lib/haptics'
@@ -33,6 +33,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
   const [daysGoal, setDaysGoal] = useState<number | null>(21)
   const [reminder, setReminder] = useState<Reminder>('none')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const submitLockRef = useRef(false)
 
   const reset = () => {
     setStep(1)
@@ -43,6 +44,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
     setDaysGoal(21)
     setReminder('none')
     setIsSubmitting(false)
+    submitLockRef.current = false
   }
 
   useEffect(() => {
@@ -69,8 +71,9 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
       return
     }
 
-    if (!category || !name.trim() || isSubmitting) return
+    if (!category || !name.trim() || isSubmitting || submitLockRef.current) return
 
+    submitLockRef.current = true
     triggerHaptic('success')
     setIsSubmitting(true)
     const created = await onCreate({
@@ -88,6 +91,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
       return
     }
 
+    submitLockRef.current = false
     setIsSubmitting(false)
   }
 

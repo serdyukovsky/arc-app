@@ -14,7 +14,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(3.5rem + var(--safe-top)) 1.25rem 1rem;
+  padding: calc(3.5rem + var(--safe-top) + var(--safe-top-gap)) 1.25rem 1rem;
   flex-shrink: 0;
 }
 
@@ -162,14 +162,18 @@
 }
 
 .typeList {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.625rem;
   margin-top: 1.5rem;
 }
 
 .typeCard {
+  width: 100%;
+  min-height: 94px;
   border-radius: 1.5rem;
   border: 2px solid #f0f0f0;
   padding: 1rem 1.1rem;
-  margin-bottom: 0.625rem;
   display: flex;
   align-items: center;
   gap: 0.875rem;

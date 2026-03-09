@@ -25,6 +25,7 @@
   --radius-drawer: 2rem;
   --font: 'Inter', -apple-system, sans-serif;
   --font-logo: 'DM Sans', sans-serif;
+  --safe-top-gap: 12px;
   --safe-top-js: 0px;
   --safe-right-js: 0px;
   --safe-bottom-js: 0px;

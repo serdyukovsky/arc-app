@@ -1,10 +1,11 @@
 .toast {
   position: fixed;
   bottom: calc(90px + var(--safe-bottom));
-  left: calc(50% + ((var(--safe-left) - var(--safe-right)) / 2));
-  transform: translateX(-50%);
-  width: max-content;
-  max-width: calc(100vw - var(--safe-left) - var(--safe-right) - 16px);
+  left: var(--safe-left);
+  right: var(--safe-right);
+  margin: 0 auto;
+  width: fit-content;
+  max-width: min(360px, calc(100% - 16px));
   z-index: 1000;
   display: flex;
   align-items: center;
