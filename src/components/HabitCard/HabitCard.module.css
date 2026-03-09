@@ -1,0 +1,339 @@
+@keyframes dpop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.5);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes checkPop {
+  0% {
+    transform: scale(0) rotate(-10deg);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.2) rotate(2deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fire {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.card {
+  background: #fff;
+  border-radius: 2.5rem;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.1s ease, opacity 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.card:active {
+  transform: scale(0.982);
+}
+
+.done {
+  background: #000;
+  color: #fff;
+}
+
+.content {
+  padding: 1.5rem 1.5rem 1.25rem;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.left {
+  min-width: 0;
+  flex: 1;
+}
+
+.dim {
+  font-size: 0.68rem;
+  font-weight: 500;
+  opacity: 0.28;
+  margin-bottom: 0.5rem;
+}
+
+.done .dim {
+  opacity: 0.6;
+}
+
+.metric {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  line-height: 1;
+}
+
+.big {
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.sub {
+  font-size: 0.9rem;
+  font-weight: 500;
+  opacity: 0.4;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  padding-top: 2px;
+  margin-left: 0.75rem;
+}
+
+.iconBox {
+  background: #f4f4f4;
+  padding: 8px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.done .iconBox {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.pill {
+  background: #f4f4f4;
+  border-radius: 999px;
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.done .pill {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.fire {
+  display: inline-block;
+  font-size: 0.85rem;
+  animation: fire 2s ease-in-out infinite;
+}
+
+.counterDots {
+  display: flex;
+  gap: 6px;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.counterDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.counterDotFilled {
+  background: #000;
+}
+
+.counterDotEmpty {
+  background: transparent;
+  border: 1.5px dashed rgba(0, 0, 0, 0.22);
+}
+
+.done .counterDotFilled {
+  background: #fff;
+}
+
+.done .counterDotEmpty {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.pop {
+  animation: dpop 0.2s ease forwards;
+}
+
+.weekRow {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+}
+
+.dayCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.dayLabel {
+  font-size: 0.48rem;
+  font-weight: 600;
+  opacity: 0.3;
+}
+
+.dayLabelToday {
+  opacity: 1;
+  font-weight: 700;
+}
+
+.dayLabelFuture {
+  opacity: 0.2;
+}
+
+.dayDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dayDotFilled {
+  background: #000;
+}
+
+.dayDotEmpty {
+  background: transparent;
+  border: 1.5px dashed rgba(0, 0, 0, 0.22);
+}
+
+.dayDotToday {
+  position: relative;
+}
+
+.dayDotToday::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1.5px solid #000;
+  opacity: 0.3;
+}
+
+.dayDotToday.dayDotEmpty {
+  background: rgba(0, 0, 0, 0.15);
+  border: none;
+}
+
+.done .dayDotFilled {
+  background: #fff;
+}
+
+.done .dayDotEmpty {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.done .dayDotToday::after {
+  border-color: #fff;
+}
+
+.done .dayDotToday.dayDotEmpty {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.dailyTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.arcRing {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  flex-shrink: 0;
+}
+
+.arcSvg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+
+.arcTrack {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.08);
+  stroke-width: 3;
+}
+
+.arcFill {
+  fill: none;
+  stroke: #000;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.3s ease, stroke 0.2s ease;
+}
+
+.arcText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  opacity: 0.35;
+  z-index: 1;
+}
+
+.done .arcTrack {
+  stroke: rgba(255, 255, 255, 0.15);
+}
+
+.done .arcFill {
+  stroke: #fff;
+}
+
+.todayCount {
+  font-size: 3.75rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+@media (max-width: 360px) {
+  .content {
+    padding: 1.25rem 1.25rem 1.1rem;
+  }
+
+  .big,
+  .todayCount {
+    font-size: 3.2rem;
+  }
+
+  .sub {
+    font-size: 0.82rem;
+  }
+}

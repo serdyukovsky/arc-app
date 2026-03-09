@@ -1,0 +1,388 @@
+.screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.topBar {
+  flex-shrink: 0;
+  padding: 3rem 1.5rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.backBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: #f2f2f2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.backBtn:active {
+  transform: scale(0.96);
+}
+
+.toggle {
+  display: inline-flex;
+  background: #f0f0f0;
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.toggleBtn {
+  padding: 6px 20px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.4);
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.activeToggle {
+  background: #e0e0e0;
+  color: #000;
+  font-weight: 600;
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1.5rem 6rem;
+}
+
+.periodHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding-top: 2rem;
+}
+
+.periodLabel {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #000;
+  line-height: 1.1;
+}
+
+.periodSub {
+  margin-top: 5px;
+  font-size: 0.7rem;
+  color: rgba(0, 0, 0, 0.32);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.periodNav {
+  display: flex;
+  gap: 6px;
+  padding-top: 6px;
+}
+
+.navBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: #f2f2f2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.navBtn:disabled {
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.navBtn:active:not(:disabled) {
+  background: #e0e0e0;
+}
+
+.trendSection {
+  margin-top: 2rem;
+}
+
+.trendWrap {
+  display: flex;
+  height: 120px;
+}
+
+.yLabels {
+  width: 28px;
+  flex-shrink: 0;
+  padding-right: 8px;
+  padding-bottom: 2px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.yLabels span {
+  font-size: 0.6rem;
+  color: rgba(0, 0, 0, 0.25);
+  line-height: 1;
+}
+
+.trendSvgWrap {
+  flex: 1;
+  min-width: 0;
+  overflow: visible;
+}
+
+.trendSvg {
+  width: 100%;
+  height: 110px;
+  display: block;
+  overflow: visible;
+}
+
+.trendLabels {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 36px;
+  margin-top: 6px;
+}
+
+.trendLabel {
+  font-size: 0.55rem;
+  font-weight: 600;
+  opacity: 0.28;
+}
+
+.trendLastLabel {
+  font-size: 0.55rem;
+  font-weight: 800;
+  opacity: 1;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+  margin-top: 1.75rem;
+}
+
+.infoCard {
+  background: #f7f7f7;
+  border-radius: 18px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.infoValue {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #000;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.infoText {
+  margin-top: 8px;
+  font-size: 0.7rem;
+  color: rgba(0, 0, 0, 0.38);
+}
+
+.infoSub {
+  margin-top: 3px;
+  font-size: 0.62rem;
+  color: rgba(0, 0, 0, 0.25);
+}
+
+.section {
+  margin-top: 2.75rem;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.sectionHeadCompact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.sectionTitle {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #000;
+}
+
+.habitRow {
+  margin-bottom: 1.5rem;
+}
+
+.habitRow:last-child {
+  margin-bottom: 0;
+}
+
+.habitName {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #000;
+  margin-bottom: 0.5rem;
+}
+
+.habitLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.habitPctLeft {
+  width: 28px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 0.62rem;
+  color: rgba(0, 0, 0, 0.3);
+}
+
+.habitBarTrack {
+  flex: 1;
+  height: 5px;
+  background: #ebebeb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.habitBarFill {
+  height: 100%;
+  background: #000;
+  border-radius: 999px;
+  transition: width 0.7s ease;
+}
+
+.habitPctRight {
+  width: 28px;
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.habitMeta {
+  margin-top: 5px;
+  padding: 0 36px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.habitMeta span {
+  font-size: 0.6rem;
+  color: rgba(0, 0, 0, 0.25);
+}
+
+.recordsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+  margin-top: 1.75rem;
+}
+
+.activitySection {
+  margin-top: 2.75rem;
+}
+
+.legend {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.legendBox {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.weekGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.weekCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.weekCell {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+}
+
+.weekLabel {
+  font-size: 0.5rem;
+  font-weight: 600;
+  opacity: 0.3;
+}
+
+.weekLabelToday {
+  font-weight: 800;
+  opacity: 1;
+}
+
+.todayCell {
+  outline: 2px solid #000;
+  outline-offset: 1px;
+}
+
+.monthHead {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.monthHead span {
+  text-align: center;
+  font-size: 0.5rem;
+  color: rgba(0, 0, 0, 0.3);
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.monthEmpty {
+  aspect-ratio: 1;
+}
+
+.monthCell {
+  border-radius: 7px;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.monthNum {
+  font-size: 0.52rem;
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
+}

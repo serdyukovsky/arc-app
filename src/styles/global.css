@@ -1,0 +1,102 @@
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #efefef;
+  --card: #ffffff;
+  --card-done: #000000;
+  --text: #000000;
+  --text-sec: rgba(0, 0, 0, 0.28);
+  --text-on-done: #ffffff;
+  --text-on-done-sec: rgba(255, 255, 255, 0.6);
+  --border: rgba(0, 0, 0, 0.06);
+  --icon-bg: #f4f4f4;
+  --pill-bg: #f4f4f4;
+  --fab: #000000;
+  --danger: #ff3b30;
+  --radius-card: 2.5rem;
+  --radius-pill: 999px;
+  --radius-btn: 1rem;
+  --radius-drawer: 2rem;
+  --font: 'Inter', -apple-system, sans-serif;
+  --font-logo: 'DM Sans', sans-serif;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html,
+body {
+  height: 100%;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  overscroll-behavior-y: contain;
+  padding-bottom: 7rem;
+}
+
+#root {
+  min-height: 100%;
+  max-width: 390px;
+  margin: 0 auto;
+  position: relative;
+  overflow-x: hidden;
+}
+
+input,
+button,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  border: none;
+  outline: none;
+  background: none;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+.material-symbols-outlined {
+  color: inherit;
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+  user-select: none;
+}
+
+*,
+*:focus,
+*:focus-visible {
+  outline: none !important;
+}
+
+* {
+  accent-color: #000;
+  caret-color: #000;
+}

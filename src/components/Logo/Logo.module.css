@@ -1,0 +1,8 @@
+.logo {
+  font-family: var(--font-logo);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  user-select: none;
+  line-height: 1;
+}

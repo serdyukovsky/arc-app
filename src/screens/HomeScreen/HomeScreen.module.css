@@ -1,0 +1,93 @@
+.screen {
+  padding-bottom: 7rem;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 0 1rem;
+}
+
+.drawerHead {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.drawerIconBox {
+  background: #f4f4f4;
+  padding: 10px;
+  border-radius: 16px;
+  display: inline-flex;
+}
+
+.drawerTitle {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.drawerGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.drawerStat {
+  background: #f7f7f7;
+  border-radius: 1.25rem;
+  padding: 1rem;
+}
+
+.drawerStatLabel {
+  font-size: 0.62rem;
+  font-weight: 600;
+  opacity: 0.4;
+  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+}
+
+.drawerStatValue {
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.drawerActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.625rem;
+}
+
+.drawerGhostBtn,
+.drawerPrimaryBtn {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  padding: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.drawerGhostBtn {
+  background: #f4f4f4;
+  color: #000;
+}
+
+.drawerPrimaryBtn {
+  background: #000;
+  color: #fff;
+}
+
+.drawerDeleteBtn {
+  width: 100%;
+  background: none;
+  border: none;
+  color: #ff3b30;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 10px;
+  border-radius: 999px;
+}
