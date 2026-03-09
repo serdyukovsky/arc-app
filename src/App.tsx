@@ -40,7 +40,7 @@ export default function App() {
     getWeekDoneCount,
     logHabit,
     undoLog,
-  } = useHabitLogs(token, habitIds)
+  } = useHabitLogs(token, habitIds, userId)
 
   const { toast, showToast, hideToast } = useToast()
 

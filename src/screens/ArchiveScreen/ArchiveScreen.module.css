@@ -1,5 +1,5 @@
 .screen {
-  padding: calc(16px + var(--safe-top) + var(--safe-top-gap)) 20px calc(100px + var(--safe-bottom));
+  padding: calc(16px + var(--safe-top) + var(--safe-top-gap) + 24px) 20px calc(100px + var(--safe-bottom));
 }
 
 .title {

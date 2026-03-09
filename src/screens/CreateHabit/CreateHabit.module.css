@@ -176,7 +176,9 @@
   padding: 1rem 1.1rem;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.875rem;
+  text-align: left;
   transition: all 0.15s ease;
 }
 

@@ -105,9 +105,10 @@ const loadDevLogs = (habitIds: string[]): HabitLog[] => {
   }
 }
 
-export function useHabitLogs(token: string | null, habitIds: string[]) {
+export function useHabitLogs(token: string | null, habitIds: string[], userId: string | null = null) {
   const [logs, setLogs] = useState<HabitLog[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const habitIdsKey = useMemo(() => habitIds.join(','), [habitIds])
 
   const fetchLogs = useCallback(async () => {
     if (!token) {
@@ -138,7 +139,54 @@ export function useHabitLogs(token: string | null, habitIds: string[]) {
     }
 
     setIsLoading(false)
-  }, [token, habitIds.join(',')])
+  }, [token, habitIdsKey])
+
+  const findLogByHabitAndDate = useCallback(
+    async (habitId: string, dateKey: string): Promise<HabitLog | null> => {
+      if (!token) return null
+      const filter = `habit = "${habitId}" && date = "${dateKey}"`
+      const res = await pbRequest<{ items: HabitLog[] }>(
+        `/api/collections/habit_logs/records?filter=${encodeURIComponent(filter)}&perPage=1&sort=-created`,
+        { token }
+      )
+      if (!res.ok || !res.data?.items?.[0]) return null
+      return res.data.items[0]
+    },
+    [token]
+  )
+
+  const createRemoteLog = useCallback(
+    async (habitId: string, dateKey: string, value: number) => {
+      if (!token) return { ok: false, status: 0, data: null as HabitLog | null }
+
+      const payloads =
+        userId
+          ? [
+              { habit: habitId, date: dateKey, value, user: userId },
+              { habit: habitId, date: dateKey, value },
+            ]
+          : [{ habit: habitId, date: dateKey, value }]
+
+      let lastRes: { ok: boolean; status: number; data: HabitLog | null } = {
+        ok: false,
+        status: 0,
+        data: null,
+      }
+
+      for (const body of payloads) {
+        const res = await pbRequest<HabitLog>('/api/collections/habit_logs/records', {
+          method: 'POST',
+          token,
+          body,
+        })
+        lastRes = res
+        if (res.ok) return res
+      }
+
+      return lastRes
+    },
+    [token, userId]
+  )
 
   useEffect(() => {
     fetchLogs()
@@ -189,8 +237,12 @@ export function useHabitLogs(token: string | null, habitIds: string[]) {
           `/api/collections/habit_logs/records/${existing.id}`,
           { method: 'PATCH', token, body: { value: newValue } }
         )
-        if (!res.ok) fetchLogs()
-        return res.data
+        if (!res.ok) {
+          console.warn('[useHabitLogs] Failed to update log', { habitId, status: res.status, data: res.data })
+          await fetchLogs()
+          return null
+        }
+        return res.data ?? { ...existing, value: newValue }
       }
 
       const tempId = `temp_${Date.now()}`
@@ -203,46 +255,56 @@ export function useHabitLogs(token: string | null, habitIds: string[]) {
       }
 
       setLogs((prev) => [tempLog, ...prev])
-      const res = await pbRequest<HabitLog>('/api/collections/habit_logs/records', {
-        method: 'POST',
-        token,
-        body: { habit: habitId, date: dateKey, value },
-      })
+      const res = await createRemoteLog(habitId, dateKey, value)
 
       if (res.ok && res.data) {
         setLogs((prev) => prev.map((l) => (l.id === tempId ? res.data! : l)))
         return res.data
       }
 
+      const fallbackLog = await findLogByHabitAndDate(habitId, dateKey)
+      if (fallbackLog) {
+        setLogs((prev) => prev.map((l) => (l.id === tempId ? fallbackLog : l)))
+        return fallbackLog
+      }
+
+      console.warn('[useHabitLogs] Failed to create log', { habitId, status: res.status, data: res.data })
       setLogs((prev) => prev.filter((l) => l.id !== tempId))
+      void fetchLogs()
       return null
     },
-    [token, logs, fetchLogs]
+    [token, logs, fetchLogs, createRemoteLog, findLogByHabitAndDate]
   )
 
   const undoLog = useCallback(
-    async (habitId: string) => {
+    async (habitId: string): Promise<boolean> => {
       const dateKey = today()
       const existing = logs.find((l) => l.habit === habitId && l.date === dateKey)
-      if (!existing) return
+      if (!existing) return false
 
       if (!token) {
-        if (!import.meta.env.DEV) return
+        if (!import.meta.env.DEV) return false
         setLogs((prev) => {
           const next = normalizeLogs(prev.filter((l) => l.id !== existing.id))
           saveDevLogs(next)
           return next
         })
-        return
+        return true
       }
 
       setLogs((prev) => prev.filter((l) => l.id !== existing.id))
-      await pbRequest(`/api/collections/habit_logs/records/${existing.id}`, {
+      const res = await pbRequest(`/api/collections/habit_logs/records/${existing.id}`, {
         method: 'DELETE',
         token,
       })
+      if (!res.ok) {
+        console.warn('[useHabitLogs] Failed to delete log', { habitId, status: res.status, data: res.data })
+        await fetchLogs()
+        return false
+      }
+      return true
     },
-    [token, logs]
+    [token, logs, fetchLogs]
   )
 
   const getLogsForHabit = useCallback(

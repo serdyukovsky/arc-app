@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Habit } from '@/types'
 import { CATEGORIES } from '@/types'
@@ -21,7 +21,7 @@ interface HomeScreenProps {
   getBestStreak: (habit: Habit) => number
   getWeekDoneCount: (id: string) => number
   logHabit: (id: string, value?: number) => Promise<any>
-  undoLog: (id: string) => Promise<void>
+  undoLog: (id: string) => Promise<boolean>
   deleteHabit: (id: string) => Promise<void>
   showToast: (message: string, onUndo?: () => void) => void
 }
@@ -53,6 +53,7 @@ export function HomeScreen({
 }: HomeScreenProps) {
   const [drawerHabit, setDrawerHabit] = useState<Habit | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<Habit | null>(null)
+  const togglePendingRef = useRef<Set<string>>(new Set())
 
   const handleTap = async (habit: Habit) => {
     if (habit.type === 'counter') {
@@ -60,7 +61,11 @@ export function HomeScreen({
       if (current >= habit.goal) return
 
       const next = Math.min(current + 1, habit.goal)
-      await logHabit(habit.id, 1)
+      const saved = await logHabit(habit.id, 1)
+      if (!saved) {
+        showToast('Не удалось сохранить отметку')
+        return
+      }
 
       if (next >= habit.goal) {
         triggerHaptic('success')
@@ -71,19 +76,35 @@ export function HomeScreen({
       return
     }
 
-    if (isDoneToday(habit)) {
-      await undoLog(habit.id)
-      showToast('Отметка снята', () => {
-        void logHabit(habit.id)
-      })
-      return
-    }
+    if (togglePendingRef.current.has(habit.id)) return
+    togglePendingRef.current.add(habit.id)
 
-    await logHabit(habit.id)
-    triggerHaptic('success')
-    showToast(`${habit.name} отмечена ✓`, () => {
-      void undoLog(habit.id)
-    })
+    try {
+      if (isDoneToday(habit)) {
+        const removed = await undoLog(habit.id)
+        if (!removed) {
+          showToast('Не удалось сохранить отметку')
+          return
+        }
+        showToast('Отметка снята', () => {
+          void logHabit(habit.id)
+        })
+        return
+      }
+
+      const created = await logHabit(habit.id)
+      if (!created) {
+        showToast('Не удалось сохранить отметку')
+        return
+      }
+
+      triggerHaptic('success')
+      showToast(`${habit.name} отмечена ✓`, () => {
+        void undoLog(habit.id)
+      })
+    } finally {
+      togglePendingRef.current.delete(habit.id)
+    }
   }
 
   return (
