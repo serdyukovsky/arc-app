@@ -32,6 +32,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
   const [goal, setGoal] = useState(1)
   const [daysGoal, setDaysGoal] = useState<number | null>(21)
   const [reminder, setReminder] = useState<Reminder>('none')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const reset = () => {
     setStep(1)
@@ -41,6 +42,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
     setGoal(1)
     setDaysGoal(21)
     setReminder('none')
+    setIsSubmitting(false)
   }
 
   useEffect(() => {
@@ -67,10 +69,11 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
       return
     }
 
-    if (!category || !name.trim()) return
+    if (!category || !name.trim() || isSubmitting) return
 
     triggerHaptic('success')
-    await onCreate({
+    setIsSubmitting(true)
+    const created = await onCreate({
       name: name.trim(),
       category,
       type,
@@ -78,11 +81,18 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
       daysGoal,
       reminder,
     })
-    showToast(`«${name.trim()}» добавлено ✓`)
-    onClose()
+
+    if (created) {
+      showToast(`«${name.trim()}» добавлено ✓`)
+      onClose()
+      return
+    }
+
+    setIsSubmitting(false)
   }
 
   const handleBack = () => {
+    if (isSubmitting) return
     triggerHaptic('light')
     if (step === 1) {
       onClose()
@@ -102,7 +112,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
           transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
         >
           <div className={styles.header}>
-            <button className={styles.backBtn} onClick={handleBack}>
+            <button className={styles.backBtn} onClick={handleBack} disabled={isSubmitting}>
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
                 arrow_back
               </span>
@@ -114,7 +124,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
               ))}
             </div>
 
-            <button className={styles.cancelBtn} onClick={onClose}>
+            <button className={styles.cancelBtn} onClick={onClose} disabled={isSubmitting}>
               Отмена
             </button>
           </div>
@@ -142,8 +152,12 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
           </div>
 
           <div className={styles.footer}>
-            <button className={styles.nextBtn} disabled={!canGoNext} onClick={() => void handleNext()}>
-              {step === 3 ? 'Создать привычку ✓' : 'Далее →'}
+            <button
+              className={styles.nextBtn}
+              disabled={!canGoNext || isSubmitting}
+              onClick={() => void handleNext()}
+            >
+              {step === 3 ? (isSubmitting ? 'Создаём...' : 'Создать привычку ✓') : 'Далее →'}
             </button>
           </div>
         </motion.div>

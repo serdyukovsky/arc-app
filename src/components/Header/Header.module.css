@@ -1,5 +1,5 @@
 .header {
-  padding: 2.25rem 1.25rem 1.5rem;
+  padding: calc(2.25rem + var(--safe-top)) 1.25rem 1.5rem;
 }
 
 .topRow {

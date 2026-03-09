@@ -25,7 +25,34 @@
   --radius-drawer: 2rem;
   --font: 'Inter', -apple-system, sans-serif;
   --font-logo: 'DM Sans', sans-serif;
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top-js: 0px;
+  --safe-right-js: 0px;
+  --safe-bottom-js: 0px;
+  --safe-left-js: 0px;
+  --safe-top: max(
+    env(safe-area-inset-top, 0px),
+    var(--tg-content-safe-area-inset-top, 0px),
+    var(--tg-safe-area-inset-top, 0px),
+    var(--safe-top-js)
+  );
+  --safe-right: max(
+    env(safe-area-inset-right, 0px),
+    var(--tg-content-safe-area-inset-right, 0px),
+    var(--tg-safe-area-inset-right, 0px),
+    var(--safe-right-js)
+  );
+  --safe-bottom: max(
+    env(safe-area-inset-bottom, 0px),
+    var(--tg-content-safe-area-inset-bottom, 0px),
+    var(--tg-safe-area-inset-bottom, 0px),
+    var(--safe-bottom-js)
+  );
+  --safe-left: max(
+    env(safe-area-inset-left, 0px),
+    var(--tg-content-safe-area-inset-left, 0px),
+    var(--tg-safe-area-inset-left, 0px),
+    var(--safe-left-js)
+  );
 }
 
 html,
@@ -45,6 +72,8 @@ body {
 body {
   overscroll-behavior-y: contain;
   padding-bottom: 7rem;
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
 }
 
 #root {

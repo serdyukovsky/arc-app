@@ -47,8 +47,8 @@ export default function App() {
   const tgUser = telegram.getUser()
 
   useEffect(() => {
-    const safeBottom = telegram.getSafeAreaBottom()
-    document.documentElement.style.setProperty('--safe-bottom', `${safeBottom}px`)
+    const cleanup = telegram.bindSafeAreaCssVars()
+    return cleanup
   }, [])
 
   const isHabitDoneToday = (habit: Habit): boolean => {
