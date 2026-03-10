@@ -2,11 +2,40 @@
   padding-bottom: calc(7rem + var(--safe-bottom));
 }
 
+@keyframes skeletonPulse {
+  0% {
+    opacity: 0.56;
+  }
+
+  50% {
+    opacity: 0.88;
+  }
+
+  100% {
+    opacity: 0.56;
+  }
+}
+
 .list {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
   padding: 0 1rem;
+}
+
+.skeletonHero {
+  height: 296px;
+  margin: 0 1rem 0.875rem;
+  border-radius: 2.5rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f8f8f8 100%);
+  animation: skeletonPulse 1.25s ease-in-out infinite;
+}
+
+.skeletonCard {
+  height: 208px;
+  border-radius: 2.5rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f9f9f9 100%);
+  animation: skeletonPulse 1.25s ease-in-out infinite;
 }
 
 .drawerHead {

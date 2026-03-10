@@ -108,6 +108,7 @@ const loadDevLogs = (habitIds: string[]): HabitLog[] => {
 export function useHabitLogs(token: string | null, habitIds: string[], userId: string | null = null) {
   const [logs, setLogs] = useState<HabitLog[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [syncedHabitIdsKey, setSyncedHabitIdsKey] = useState('')
   const habitIdsKey = useMemo(() => habitIds.join(','), [habitIds])
 
   const fetchLogs = useCallback(async () => {
@@ -117,16 +118,19 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
       } else {
         setLogs([])
       }
+      setSyncedHabitIdsKey(habitIdsKey)
       setIsLoading(false)
       return
     }
 
     if (habitIds.length === 0) {
       setLogs([])
+      setSyncedHabitIdsKey(habitIdsKey)
       setIsLoading(false)
       return
     }
 
+    setIsLoading(true)
     const since = daysAgo(90)
     const filter = `date >= "${since}"`
     const res = await pbRequest<{ items: HabitLog[] }>(
@@ -138,6 +142,7 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
       setLogs(normalizeLogs(res.data.items))
     }
 
+    setSyncedHabitIdsKey(habitIdsKey)
     setIsLoading(false)
   }, [token, habitIdsKey])
 
@@ -384,6 +389,7 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
   return {
     logs,
     isLoading,
+    hasSyncedCurrentHabits: syncedHabitIdsKey === habitIdsKey,
     logHabit,
     undoLog,
     getLogsForHabit,

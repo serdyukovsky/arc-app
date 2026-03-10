@@ -24,8 +24,24 @@ const getDefaultGoal = (type: HabitType): number => {
 
 const getDefaultDaysGoal = (type: HabitType): number => (type === 'periodic' ? 8 : 21)
 
+const stepTransition = {
+  enter: (direction: number) => ({
+    opacity: 0,
+    x: direction > 0 ? 18 : -18,
+  }),
+  center: {
+    opacity: 1,
+    x: 0,
+  },
+  exit: (direction: number) => ({
+    opacity: 0,
+    x: direction > 0 ? -14 : 14,
+  }),
+}
+
 export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitProps) {
   const [step, setStep] = useState(1)
+  const [stepDirection, setStepDirection] = useState(1)
   const [name, setName] = useState('')
   const [category, setCategory] = useState<Category | null>(null)
   const [type, setType] = useState<HabitType>('daily')
@@ -37,6 +53,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
 
   const reset = () => {
     setStep(1)
+    setStepDirection(1)
     setName('')
     setCategory(null)
     setType('daily')
@@ -67,6 +84,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
     if (step < 3) {
       if (!canGoNext) return
       triggerHaptic('light')
+      setStepDirection(1)
       setStep((prev) => prev + 1)
       return
     }
@@ -102,6 +120,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
       onClose()
       return
     }
+    setStepDirection(-1)
     setStep((prev) => prev - 1)
   }
 
@@ -134,25 +153,38 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
           </div>
 
           <div className={styles.body}>
-            {step === 1 && (
-              <Step1
-                name={name}
-                onNameChange={setName}
-                category={category}
-                onCategoryChange={setCategory}
-              />
-            )}
-            {step === 2 && (
-              <Step2
-                type={type}
-                onTypeChange={handleTypeChange}
-                goal={goal}
-                onGoalChange={setGoal}
-                daysGoal={daysGoal}
-                onDaysGoalChange={setDaysGoal}
-              />
-            )}
-            {step === 3 && <Step3 reminder={reminder} onReminderChange={setReminder} />}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={step}
+                className={styles.stepPane}
+                custom={stepDirection}
+                variants={stepTransition}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {step === 1 && (
+                  <Step1
+                    name={name}
+                    onNameChange={setName}
+                    category={category}
+                    onCategoryChange={setCategory}
+                  />
+                )}
+                {step === 2 && (
+                  <Step2
+                    type={type}
+                    onTypeChange={handleTypeChange}
+                    goal={goal}
+                    onGoalChange={setGoal}
+                    daysGoal={daysGoal}
+                    onDaysGoalChange={setDaysGoal}
+                  />
+                )}
+                {step === 3 && <Step3 reminder={reminder} onReminderChange={setReminder} />}
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           <div className={styles.footer}>

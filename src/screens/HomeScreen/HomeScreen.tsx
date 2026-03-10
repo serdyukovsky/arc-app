@@ -12,6 +12,7 @@ import { Icon } from '@/components/Icon/Icon'
 import styles from './HomeScreen.module.css'
 
 interface HomeScreenProps {
+  isHydrated: boolean
   habits: Habit[]
   todayCompletedCount: number
   getTodayValue: (id: string) => number
@@ -38,6 +39,7 @@ const formatStarted = (isoDate: string): string =>
   new Date(isoDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
 
 export function HomeScreen({
+  isHydrated,
   habits,
   todayCompletedCount,
   getTodayValue,
@@ -107,20 +109,50 @@ export function HomeScreen({
     }
   }
 
+  if (!isHydrated) {
+    return (
+      <div className={styles.screen}>
+        <Header />
+        <div className={styles.skeletonHero} />
+        <div className={styles.list}>
+          {[0, 1, 2].map((index) => (
+            <div
+              key={index}
+              className={styles.skeletonCard}
+              style={{ animationDelay: `${index * 0.08}s` }}
+            />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={styles.screen}>
       <Header />
-      <HeroCard completed={todayCompletedCount} total={habits.length} />
+      <motion.div
+        initial={{ opacity: 0, y: 14, scale: 0.992 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <HeroCard completed={todayCompletedCount} total={habits.length} />
+      </motion.div>
 
       <div className={styles.list}>
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {habits.map((habit, i) => (
             <motion.div
               key={habit.id}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12, scale: 0.95 }}
-              transition={{ delay: i * 0.07, duration: 0.4 }}
+              layout
+              initial={{ opacity: 0, y: 16, scale: 0.985, filter: 'blur(4px)' }}
+              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: -10, scale: 0.97 }}
+              transition={{
+                delay: Math.min(i * 0.06, 0.3),
+                duration: 0.36,
+                ease: [0.22, 1, 0.36, 1],
+                layout: { type: 'spring', stiffness: 520, damping: 38 },
+              }}
             >
               <HabitCard
                 habit={habit}

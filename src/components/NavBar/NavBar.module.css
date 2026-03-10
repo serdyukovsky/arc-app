@@ -31,7 +31,7 @@
   border: none;
   color: #000;
   opacity: 0.28;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.18s ease, transform 0.18s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -39,6 +39,11 @@
 
 .tab.active {
   opacity: 1;
+  transform: translateY(-1px);
+}
+
+.tab:active {
+  transform: scale(0.94);
 }
 
 .fab {
@@ -53,4 +58,10 @@
   justify-content: center;
   margin-top: -24px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  transition: transform 0.16s ease, box-shadow 0.2s ease;
+}
+
+.fab:active {
+  transform: translateY(1px) scale(0.96);
+  box-shadow: 0 2px 9px rgba(0, 0, 0, 0.24);
 }

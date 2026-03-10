@@ -63,6 +63,10 @@
   padding: 0 1.25rem 1rem;
 }
 
+.stepPane {
+  will-change: transform, opacity;
+}
+
 .footer {
   padding: 1rem 1.25rem calc(2.5rem + var(--safe-bottom));
   border-top: 1px solid #f0f0f0;
@@ -70,7 +74,7 @@
 }
 
 .step {
-  animation: slideUp 0.3s ease both;
+  animation: none;
 }
 
 .stepMeta {

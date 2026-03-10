@@ -8,6 +8,13 @@
 .content {
   min-height: 100vh;
   min-height: 100dvh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.panel {
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .loading {
