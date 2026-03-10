@@ -16,9 +16,9 @@ import { CreateHabit } from '@/screens/CreateHabit/CreateHabit'
 import styles from './App.module.css'
 
 const screenTransition = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  exit: { opacity: 0 },
+  initial: { opacity: 0, y: 14, scale: 0.996 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -8, scale: 0.998 },
 }
 
 export default function App() {
@@ -100,7 +100,7 @@ export default function App() {
   return (
     <div className={styles.app}>
       <div className={styles.content}>
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence mode="sync" initial={false}>
           <motion.div
             key={screen}
             className={styles.panel}
@@ -108,7 +108,11 @@ export default function App() {
             initial="initial"
             animate="animate"
             exit="exit"
-            transition={{ duration: 0.14, ease: [0.2, 0.8, 0.2, 1] }}
+            transition={{
+              opacity: { duration: 0.18, ease: 'linear' },
+              y: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
+              scale: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
+            }}
           >
             {screen === 'home' && (
               <HomeScreen

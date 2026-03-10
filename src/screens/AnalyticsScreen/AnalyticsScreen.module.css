@@ -24,20 +24,23 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: opacity 0.16s ease, background-color 0.16s ease;
 }
 
 .backBtn:active {
-  transform: scale(0.96);
+  opacity: 0.72;
 }
 
 .toggle {
   display: inline-flex;
-  background: #f0f0f0;
+  background: #f1f1f1;
   border-radius: 999px;
   padding: 3px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.03);
 }
 
 .toggleBtn {
+  position: relative;
   padding: 6px 20px;
   border: none;
   border-radius: 999px;
@@ -47,13 +50,26 @@
   font-weight: 500;
   font-family: inherit;
   white-space: nowrap;
-  transition: all 0.2s;
+  transition: color 0.2s ease;
+  overflow: hidden;
 }
 
 .activeToggle {
-  background: #e0e0e0;
   color: #000;
   font-weight: 600;
+}
+
+.togglePill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 6px 16px rgba(0, 0, 0, 0.04);
+}
+
+.toggleLabel {
+  position: relative;
+  z-index: 1;
 }
 
 .body {
@@ -100,7 +116,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
 }
 
 .navBtn:disabled {
@@ -109,7 +125,11 @@
 }
 
 .navBtn:active:not(:disabled) {
-  background: #e0e0e0;
+  opacity: 0.72;
+}
+
+.trendFrame {
+  will-change: opacity, transform;
 }
 
 .trendSection {
@@ -181,6 +201,7 @@
   border-radius: 18px;
   padding: 1.5rem;
   text-align: center;
+  overflow: hidden;
 }
 
 .infoValue {
@@ -268,7 +289,7 @@
   height: 100%;
   background: #000;
   border-radius: 999px;
-  transition: width 0.7s ease;
+  transform-origin: left center;
 }
 
 .habitPctRight {

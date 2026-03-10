@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, LayoutGroup, animate, motion, useReducedMotion } from 'framer-motion'
 import type { Habit, HabitLog } from '@/types'
 import { parseKey, toKey } from '@/lib/date'
 import styles from './AnalyticsScreen.module.css'
@@ -73,9 +74,58 @@ const getStreakUnit = (habit: Habit): string => {
   return habit.type === 'periodic' ? 'нед' : 'дн'
 }
 
+const ANALYTICS_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1]
+
+const sectionVariants = {
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+}
+
+interface AnimatedNumberProps {
+  value: number
+  prefix?: string
+  suffix?: string
+}
+
+function AnimatedNumber({ value, prefix = '', suffix = '' }: AnimatedNumberProps) {
+  const reduceMotion = useReducedMotion()
+  const [display, setDisplay] = useState(value)
+  const previousRef = useRef(value)
+
+  useEffect(() => {
+    if (reduceMotion) {
+      setDisplay(value)
+      previousRef.current = value
+      return
+    }
+
+    const controls = animate(previousRef.current, value, {
+      duration: 0.52,
+      ease: ANALYTICS_EASE,
+      onUpdate: (latest) => {
+        setDisplay(Math.round(latest))
+      },
+    })
+
+    previousRef.current = value
+    return () => controls.stop()
+  }, [reduceMotion, value])
+
+  return (
+    <>
+      {prefix}
+      {display}
+      {suffix}
+    </>
+  )
+}
+
 export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClose }: AnalyticsScreenProps) {
   const [period, setPeriod] = useState<Period>('week')
   const [offset, setOffset] = useState(0)
+  const reduceMotion = useReducedMotion()
+  const areaGradientId = useId().replace(/:/g, '')
+  const viewKey = `${period}:${offset}`
 
   const todayDate = floorDate(new Date())
   const todayKey = toKey(todayDate)
@@ -143,6 +193,7 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
       diffText: percentDiff(currentPct, previousPct),
     }
   }, [habits, rangeDaysPast, prevRangeDaysPast, logMap])
+  const summaryDiff = summary.currentPct - summary.previousPct
 
   const perfectDays = useMemo(() => {
     if (habits.length === 0) return 0
@@ -349,33 +400,59 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
           <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>arrow_back</span>
         </button>
 
-        <div className={styles.toggle}>
-          <button
-            className={`${styles.toggleBtn} ${period === 'week' ? styles.activeToggle : ''}`}
-            onClick={() => {
-              setPeriod('week')
-              setOffset(0)
-            }}
-          >
-            Неделя
-          </button>
-          <button
-            className={`${styles.toggleBtn} ${period === 'month' ? styles.activeToggle : ''}`}
-            onClick={() => {
-              setPeriod('month')
-              setOffset(0)
-            }}
-          >
-            Месяц
-          </button>
-        </div>
+        <LayoutGroup id="analytics-period-toggle">
+          <div className={styles.toggle}>
+            <button
+              className={`${styles.toggleBtn} ${period === 'week' ? styles.activeToggle : ''}`}
+              onClick={() => {
+                setPeriod('week')
+                setOffset(0)
+              }}
+            >
+              {period === 'week' && (
+                <motion.span
+                  layoutId="analytics-toggle-pill"
+                  className={styles.togglePill}
+                  transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.8 }}
+                />
+              )}
+              <span className={styles.toggleLabel}>Неделя</span>
+            </button>
+            <button
+              className={`${styles.toggleBtn} ${period === 'month' ? styles.activeToggle : ''}`}
+              onClick={() => {
+                setPeriod('month')
+                setOffset(0)
+              }}
+            >
+              {period === 'month' && (
+                <motion.span
+                  layoutId="analytics-toggle-pill"
+                  className={styles.togglePill}
+                  transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.8 }}
+                />
+              )}
+              <span className={styles.toggleLabel}>Месяц</span>
+            </button>
+          </div>
+        </LayoutGroup>
       </div>
 
       <div className={styles.body}>
         <div className={styles.periodHead}>
           <div>
-            <div className={styles.periodLabel}>{heading.label}</div>
-            <div className={styles.periodSub}>{heading.subLabel}</div>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={viewKey}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: reduceMotion ? 0 : 0.22, ease: ANALYTICS_EASE }}
+              >
+                <div className={styles.periodLabel}>{heading.label}</div>
+                <div className={styles.periodSub}>{heading.subLabel}</div>
+              </motion.div>
+            </AnimatePresence>
           </div>
           <div className={styles.periodNav}>
             <button className={styles.navBtn} onClick={() => setOffset((v) => v - 1)} aria-label="Предыдущий период">
@@ -392,85 +469,217 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
           </div>
         </div>
 
-        <section className={styles.trendSection}>
-          <div className={styles.trendWrap}>
-            <div className={styles.yLabels}>
-              <span>100%</span>
-              <span>50%</span>
-              <span>0</span>
-            </div>
-            <div className={styles.trendSvgWrap}>
-              <svg className={styles.trendSvg} viewBox="0 0 300 100" preserveAspectRatio="none">
-                <line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" />
-                <line x1="0" y1="50" x2="300" y2="50" stroke="#f0f0f0" strokeWidth="1" />
-                <line x1="0" y1="100" x2="300" y2="100" stroke="#ebebeb" strokeWidth="1" />
-                <path d={chartGeometry.areaPath} fill="rgba(0,0,0,0.04)" />
-                <path d={chartGeometry.linePath} fill="none" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                {chartGeometry.points.map((point, i) => (
-                  <g key={`${point.label}-${i}`}>
-                    <circle
-                      cx={point.x}
-                      cy={point.y}
-                      r={point.isLast ? 5 : 3}
-                      fill={point.isLast ? '#000' : '#fff'}
-                      stroke="#000"
-                      strokeWidth={point.isLast ? 0 : 1.5}
+        <motion.section
+          className={styles.trendSection}
+          variants={sectionVariants}
+          initial="initial"
+          animate="animate"
+          transition={{ duration: reduceMotion ? 0 : 0.28, ease: ANALYTICS_EASE, delay: 0.04 }}
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={viewKey}
+              className={styles.trendFrame}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: reduceMotion ? 0 : 0.22, ease: ANALYTICS_EASE }}
+            >
+              <div className={styles.trendWrap}>
+                <div className={styles.yLabels}>
+                  <span>100%</span>
+                  <span>50%</span>
+                  <span>0</span>
+                </div>
+                <div className={styles.trendSvgWrap}>
+                  <svg className={styles.trendSvg} viewBox="0 0 300 100" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id={areaGradientId} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#000" stopOpacity="0.16" />
+                        <stop offset="65%" stopColor="#000" stopOpacity="0.04" />
+                        <stop offset="100%" stopColor="#000" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+
+                    <line x1="0" y1="0" x2="300" y2="0" stroke="#f0f0f0" strokeWidth="1" />
+                    <line x1="0" y1="50" x2="300" y2="50" stroke="#f0f0f0" strokeWidth="1" />
+                    <line x1="0" y1="100" x2="300" y2="100" stroke="#ebebeb" strokeWidth="1" />
+                    <path
+                      d={chartGeometry.linePath}
+                      fill="none"
+                      stroke="rgba(0,0,0,0.07)"
+                      strokeWidth="8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
-                    <text
-                      x={point.x}
-                      y={point.y - 7}
-                      textAnchor="middle"
-                      fontSize={point.isLast ? 10 : 8.5}
-                      fontWeight={point.isLast ? 800 : 600}
-                      fill={point.isLast ? '#000' : 'rgba(0,0,0,0.35)'}
-                      fontFamily="Inter, sans-serif"
-                    >
-                      {point.pct}%
-                    </text>
-                  </g>
+                    <motion.path
+                      key={`${viewKey}-area`}
+                      d={chartGeometry.areaPath}
+                      fill={`url(#${areaGradientId})`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: reduceMotion ? 0 : 0.32, ease: ANALYTICS_EASE, delay: 0.08 }}
+                    />
+                    <motion.path
+                      key={`${viewKey}-line`}
+                      d={chartGeometry.linePath}
+                      fill="none"
+                      stroke="#000"
+                      strokeWidth="2.25"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: reduceMotion ? 0 : 0.56, ease: ANALYTICS_EASE, delay: 0.08 }}
+                    />
+                    {chartGeometry.points.map((point, i) => (
+                      <g key={`${point.label}-${i}`}>
+                        <motion.circle
+                          cx={point.x}
+                          cy={point.y}
+                          fill={point.isLast ? '#000' : '#fff'}
+                          stroke="#000"
+                          strokeWidth={point.isLast ? 0 : 1.5}
+                          initial={{ opacity: 0, r: 0 }}
+                          animate={{ opacity: 1, r: point.isLast ? 5 : 3 }}
+                          transition={{
+                            duration: reduceMotion ? 0 : 0.18,
+                            ease: ANALYTICS_EASE,
+                            delay: reduceMotion ? 0 : 0.18 + i * 0.04,
+                          }}
+                        />
+                        <motion.text
+                          x={point.x}
+                          y={point.y - 7}
+                          textAnchor="middle"
+                          fontSize={point.isLast ? 10 : 8.5}
+                          fontWeight={point.isLast ? 800 : 600}
+                          fill={point.isLast ? '#000' : 'rgba(0,0,0,0.35)'}
+                          fontFamily="Inter, sans-serif"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{
+                            duration: reduceMotion ? 0 : 0.18,
+                            ease: ANALYTICS_EASE,
+                            delay: reduceMotion ? 0 : 0.22 + i * 0.04,
+                          }}
+                        >
+                          {point.pct}%
+                        </motion.text>
+                      </g>
+                    ))}
+                  </svg>
+                </div>
+              </div>
+              <div className={styles.trendLabels}>
+                {trend.map((point) => (
+                  <span key={point.label} className={point.isLast ? styles.trendLastLabel : styles.trendLabel}>
+                    {point.label}
+                  </span>
                 ))}
-              </svg>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </motion.section>
+
+        <motion.section
+          className={styles.summaryGrid}
+          initial="initial"
+          animate="animate"
+          variants={{
+            initial: {},
+            animate: {
+              transition: {
+                delayChildren: reduceMotion ? 0 : 0.08,
+                staggerChildren: reduceMotion ? 0 : 0.05,
+              },
+            },
+          }}
+        >
+          <motion.div
+            className={styles.infoCard}
+            variants={sectionVariants}
+            transition={{ duration: reduceMotion ? 0 : 0.26, ease: ANALYTICS_EASE }}
+          >
+            <div className={styles.infoValue}>
+              <AnimatedNumber value={summary.currentPct} suffix="%" />
             </div>
-          </div>
-          <div className={styles.trendLabels}>
-            {trend.map((point) => (
-              <span key={point.label} className={point.isLast ? styles.trendLastLabel : styles.trendLabel}>{point.label}</span>
-            ))}
-          </div>
-        </section>
-
-        <section className={styles.summaryGrid}>
-          <div className={styles.infoCard}>
-            <div className={styles.infoValue}>{summary.currentPct}%</div>
             <div className={styles.infoText}>{summary.currentDone} из {summary.currentTotal}</div>
-          </div>
-          <div className={styles.infoCard}>
-            <div className={styles.infoValue}>{summary.diffText}</div>
+          </motion.div>
+          <motion.div
+            className={styles.infoCard}
+            variants={sectionVariants}
+            transition={{ duration: reduceMotion ? 0 : 0.26, ease: ANALYTICS_EASE }}
+          >
+            <div className={styles.infoValue}>
+              <AnimatedNumber
+                value={summaryDiff}
+                prefix={summaryDiff > 0 ? '+' : ''}
+                suffix="%"
+              />
+            </div>
             <div className={styles.infoText}>vs прошлый</div>
-          </div>
-          <div className={styles.infoCard}>
-            <div className={styles.infoValue}>{perfectDays}</div>
+          </motion.div>
+          <motion.div
+            className={styles.infoCard}
+            variants={sectionVariants}
+            transition={{ duration: reduceMotion ? 0 : 0.26, ease: ANALYTICS_EASE }}
+          >
+            <div className={styles.infoValue}>
+              <AnimatedNumber value={perfectDays} />
+            </div>
             <div className={styles.infoText}>идеальных дней</div>
-          </div>
-          <div className={styles.infoCard}>
-            <div className={styles.infoValue}>{bestWeekPct}%</div>
+          </motion.div>
+          <motion.div
+            className={styles.infoCard}
+            variants={sectionVariants}
+            transition={{ duration: reduceMotion ? 0 : 0.26, ease: ANALYTICS_EASE }}
+          >
+            <div className={styles.infoValue}>
+              <AnimatedNumber value={bestWeekPct} suffix="%" />
+            </div>
             <div className={styles.infoText}>лучшая неделя</div>
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
-        <section className={styles.section}>
+        <motion.section
+          className={styles.section}
+          variants={sectionVariants}
+          initial="initial"
+          animate="animate"
+          transition={{ duration: reduceMotion ? 0 : 0.28, ease: ANALYTICS_EASE, delay: 0.12 }}
+        >
           <div className={styles.sectionHead}>
             <span className={styles.sectionTitle}>Привычки</span>
             <span className="material-symbols-outlined" style={{ fontSize: '1rem', color: 'rgba(0,0,0,0.28)' }}>chevron_right</span>
           </div>
           <div>
-            {breakdown.map((row) => (
-              <div key={row.habit.id} className={styles.habitRow}>
+            {breakdown.map((row, index) => (
+              <motion.div
+                key={row.habit.id}
+                className={styles.habitRow}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: reduceMotion ? 0 : 0.24,
+                  ease: ANALYTICS_EASE,
+                  delay: reduceMotion ? 0 : 0.08 + index * 0.035,
+                }}
+              >
                 <div className={styles.habitName}>{row.habit.name}</div>
                 <div className={styles.habitLine}>
                   <span className={styles.habitPctLeft}>{row.previousPct}%</span>
                   <div className={styles.habitBarTrack}>
-                    <div className={styles.habitBarFill} style={{ width: `${row.currentPct}%` }} />
+                    <motion.div
+                      className={styles.habitBarFill}
+                      initial={{ width: `${row.previousPct}%` }}
+                      animate={{ width: `${row.currentPct}%` }}
+                      transition={{
+                        duration: reduceMotion ? 0 : 0.5,
+                        ease: ANALYTICS_EASE,
+                        delay: reduceMotion ? 0 : 0.12 + index * 0.035,
+                      }}
+                    />
                   </div>
                   <span className={styles.habitPctRight}>{row.diffText}</span>
                 </div>
@@ -478,25 +687,56 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
                   <span>Стрик: {row.streak} {getStreakUnit(row.habit)}</span>
                   <span>Рекорд: {row.bestStreak} {getStreakUnit(row.habit)}</span>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </section>
+        </motion.section>
 
-        <section className={styles.recordsGrid}>
-          <div className={styles.infoCard}>
-            <div className={styles.infoValue}>{recordHabits.best.value}</div>
+        <motion.section
+          className={styles.recordsGrid}
+          initial="initial"
+          animate="animate"
+          variants={{
+            initial: {},
+            animate: {
+              transition: {
+                delayChildren: reduceMotion ? 0 : 0.16,
+                staggerChildren: reduceMotion ? 0 : 0.05,
+              },
+            },
+          }}
+        >
+          <motion.div
+            className={styles.infoCard}
+            variants={sectionVariants}
+            transition={{ duration: reduceMotion ? 0 : 0.26, ease: ANALYTICS_EASE }}
+          >
+            <div className={styles.infoValue}>
+              <AnimatedNumber value={recordHabits.best.value} />
+            </div>
             <div className={styles.infoText}>рекорд стрика</div>
             <div className={styles.infoSub}>{recordHabits.best.name}</div>
-          </div>
-          <div className={styles.infoCard}>
-            <div className={styles.infoValue}>{recordHabits.current.value}</div>
+          </motion.div>
+          <motion.div
+            className={styles.infoCard}
+            variants={sectionVariants}
+            transition={{ duration: reduceMotion ? 0 : 0.26, ease: ANALYTICS_EASE }}
+          >
+            <div className={styles.infoValue}>
+              <AnimatedNumber value={recordHabits.current.value} />
+            </div>
             <div className={styles.infoText}>текущий стрик</div>
             <div className={styles.infoSub}>{recordHabits.current.name}</div>
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
-        <section className={styles.activitySection}>
+        <motion.section
+          className={styles.activitySection}
+          variants={sectionVariants}
+          initial="initial"
+          animate="animate"
+          transition={{ duration: reduceMotion ? 0 : 0.28, ease: ANALYTICS_EASE, delay: 0.2 }}
+        >
           <div className={styles.sectionHeadCompact}>
             <span className={styles.sectionTitle}>Активность</span>
             <div className={styles.legend}>
@@ -508,7 +748,13 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
           </div>
 
           {period === 'week' ? (
-            <div className={styles.weekGrid}>
+            <motion.div
+              key={viewKey}
+              className={styles.weekGrid}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.2, ease: ANALYTICS_EASE }}
+            >
               {weekCells.map((cell) => (
                 <div key={cell.day} className={styles.weekCol}>
                   <div
@@ -521,9 +767,14 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
                   <span className={`${styles.weekLabel} ${cell.isToday ? styles.weekLabelToday : ''}`}>{cell.label}</span>
                 </div>
               ))}
-            </div>
+            </motion.div>
           ) : (
-            <>
+            <motion.div
+              key={viewKey}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.2, ease: ANALYTICS_EASE }}
+            >
               <div className={styles.monthHead}>
                 {WEEK_DOW.map((label) => (
                   <span key={label}>{label}</span>
@@ -569,9 +820,9 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
                   )
                 })}
               </div>
-            </>
+            </motion.div>
           )}
-        </section>
+        </motion.section>
       </div>
     </div>
   )
