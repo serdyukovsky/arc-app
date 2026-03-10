@@ -130,28 +130,18 @@ export function HomeScreen({
   return (
     <div className={styles.screen}>
       <Header />
-      <motion.div
-        initial={{ opacity: 0, y: 14, scale: 0.992 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <HeroCard completed={todayCompletedCount} total={habits.length} />
-      </motion.div>
+      <HeroCard completed={todayCompletedCount} total={habits.length} />
 
       <div className={styles.list}>
-        <AnimatePresence mode="popLayout">
-          {habits.map((habit, i) => (
+        <AnimatePresence initial={false}>
+          {habits.map((habit) => (
             <motion.div
               key={habit.id}
-              layout
-              initial={{ opacity: 0, y: 16, scale: 0.985, filter: 'blur(4px)' }}
-              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, y: -10, scale: 0.97 }}
+              layout="position"
+              exit={{ opacity: 0 }}
               transition={{
-                delay: Math.min(i * 0.06, 0.3),
-                duration: 0.36,
-                ease: [0.22, 1, 0.36, 1],
-                layout: { type: 'spring', stiffness: 520, damping: 38 },
+                opacity: { duration: 0.12, ease: 'linear' },
+                layout: { duration: 0.18, ease: [0.2, 0.8, 0.2, 1] },
               }}
             >
               <HabitCard

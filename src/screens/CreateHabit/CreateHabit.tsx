@@ -25,23 +25,13 @@ const getDefaultGoal = (type: HabitType): number => {
 const getDefaultDaysGoal = (type: HabitType): number => (type === 'periodic' ? 8 : 21)
 
 const stepTransition = {
-  enter: (direction: number) => ({
-    opacity: 0,
-    x: direction > 0 ? 18 : -18,
-  }),
-  center: {
-    opacity: 1,
-    x: 0,
-  },
-  exit: (direction: number) => ({
-    opacity: 0,
-    x: direction > 0 ? -14 : 14,
-  }),
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
 }
 
 export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitProps) {
   const [step, setStep] = useState(1)
-  const [stepDirection, setStepDirection] = useState(1)
   const [name, setName] = useState('')
   const [category, setCategory] = useState<Category | null>(null)
   const [type, setType] = useState<HabitType>('daily')
@@ -53,7 +43,6 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
 
   const reset = () => {
     setStep(1)
-    setStepDirection(1)
     setName('')
     setCategory(null)
     setType('daily')
@@ -84,7 +73,6 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
     if (step < 3) {
       if (!canGoNext) return
       triggerHaptic('light')
-      setStepDirection(1)
       setStep((prev) => prev + 1)
       return
     }
@@ -120,7 +108,6 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
       onClose()
       return
     }
-    setStepDirection(-1)
     setStep((prev) => prev - 1)
   }
 
@@ -129,10 +116,13 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
       {open && (
         <motion.div
           className={styles.overlay}
-          initial={{ x: '100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '100%' }}
-          transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 12 }}
+          transition={{
+            opacity: { duration: 0.14, ease: 'linear' },
+            y: { duration: 0.18, ease: [0.2, 0.8, 0.2, 1] },
+          }}
         >
           <div className={styles.header}>
             <button className={styles.backBtn} onClick={handleBack} disabled={isSubmitting}>
@@ -157,12 +147,11 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
               <motion.div
                 key={step}
                 className={styles.stepPane}
-                custom={stepDirection}
                 variants={stepTransition}
-                initial="enter"
-                animate="center"
+                initial="initial"
+                animate="animate"
                 exit="exit"
-                transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.14, ease: [0.2, 0.8, 0.2, 1] }}
               >
                 {step === 1 && (
                   <Step1

@@ -44,17 +44,17 @@
 }
 
 .stepDot {
-  width: 6px;
+  width: 18px;
   height: 6px;
-  border-radius: 50%;
+  border-radius: 999px;
   background: #e0e0e0;
-  transition: all 0.3s ease;
+  opacity: 0.34;
+  transition: opacity 0.16s ease, background-color 0.16s ease;
 }
 
 .activeDot {
-  width: 18px;
-  border-radius: 3px;
   background: #000;
+  opacity: 1;
 }
 
 .body {
@@ -64,7 +64,7 @@
 }
 
 .stepPane {
-  will-change: transform, opacity;
+  will-change: opacity;
 }
 
 .footer {

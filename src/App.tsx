@@ -15,32 +15,15 @@ import { ProfileScreen } from '@/screens/ProfileScreen/ProfileScreen'
 import { CreateHabit } from '@/screens/CreateHabit/CreateHabit'
 import styles from './App.module.css'
 
-const SCREEN_ORDER: Record<Screen, number> = {
-  home: 0,
-  analytics: 1,
-  archive: 2,
-  profile: 3,
-}
-
 const screenTransition = {
-  enter: (direction: number) => ({
-    opacity: 0,
-    x: direction > 0 ? 26 : -26,
-  }),
-  center: {
-    opacity: 1,
-    x: 0,
-  },
-  exit: (direction: number) => ({
-    opacity: 0,
-    x: direction > 0 ? -16 : 16,
-  }),
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
 }
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
   const [createOpen, setCreateOpen] = useState(false)
-  const [screenDirection, setScreenDirection] = useState(1)
 
   const telegram = useTelegram()
   const { token, userId, isLoading: authLoading } = useAuth(telegram.getInitData)
@@ -80,7 +63,6 @@ export default function App() {
 
   const navigateTo = (next: Screen) => {
     if (next === screen) return
-    setScreenDirection(SCREEN_ORDER[next] > SCREEN_ORDER[screen] ? 1 : -1)
     setScreen(next)
   }
 
@@ -122,12 +104,11 @@ export default function App() {
           <motion.div
             key={screen}
             className={styles.panel}
-            custom={screenDirection}
             variants={screenTransition}
-            initial="enter"
-            animate="center"
+            initial="initial"
+            animate="animate"
             exit="exit"
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.14, ease: [0.2, 0.8, 0.2, 1] }}
           >
             {screen === 'home' && (
               <HomeScreen
