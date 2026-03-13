@@ -26,7 +26,7 @@ export type { CreateHabitData }
 
 interface CreateHabitProps {
   open: boolean
-  onClose: () => void
+  onClose: (options?: { reopenDrawer?: boolean }) => void
   onCreate: (data: CreateHabitData) => Promise<any>
   onUpdate?: (habitId: string, data: CreateHabitData) => Promise<any>
   editingHabit?: Habit | null
@@ -141,14 +141,14 @@ export function CreateHabit({
       const updated = await onUpdate(editingHabit.id, payload)
       if (updated) {
         showToast(`«${name.trim()}» обновлено ✓`)
-        onClose()
+        onClose({ reopenDrawer: false })
         return
       }
     } else {
       const created = await onCreate(payload)
       if (created) {
         showToast(`«${name.trim()}» добавлено ✓`)
-        onClose()
+        onClose({ reopenDrawer: false })
         return
       }
     }
@@ -159,11 +159,15 @@ export function CreateHabit({
 
   const isEditMode = !!editingHabit
 
+  const closeWithFallback = (reopenDrawer: boolean) => {
+    onClose({ reopenDrawer: isEditMode && reopenDrawer })
+  }
+
   const handleBack = () => {
     if (isSubmitting) return
     triggerHaptic('light')
     if (step === 1) {
-      onClose()
+      closeWithFallback(true)
       return
     }
     setStep((prev) => prev - 1)
@@ -197,7 +201,7 @@ export function CreateHabit({
               ))}
             </div>
 
-            <button className={styles.cancelBtn} onClick={onClose} disabled={isSubmitting}>
+            <button className={styles.cancelBtn} onClick={() => closeWithFallback(true)} disabled={isSubmitting}>
               Отмена
             </button>
           </div>

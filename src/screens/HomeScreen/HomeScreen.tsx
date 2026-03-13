@@ -38,6 +38,8 @@ interface HomeScreenProps {
   onGoalComplete: (habitId: string) => void
   onGoalContinue: (habitId: string) => void
   onEditHabit: (habit: Habit, fromDrawer?: boolean) => void
+  restoreDrawerHabitId?: string | null
+  onRestoreDrawerHandled?: () => void
 }
 
 const counterUnit = (name: string): string => {
@@ -80,6 +82,8 @@ export function HomeScreen({
   onGoalComplete,
   onGoalContinue,
   onEditHabit,
+  restoreDrawerHabitId = null,
+  onRestoreDrawerHandled,
 }: HomeScreenProps) {
   const [drawerHabit, setDrawerHabit] = useState<Habit | null>(null)
   const [pulseHabitId, setPulseHabitId] = useState<string | null>(null)
@@ -98,6 +102,16 @@ export function HomeScreen({
       if (editTransitionTimeoutRef.current) clearTimeout(editTransitionTimeoutRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (!restoreDrawerHabitId) return
+    const habit = habits.find((item) => item.id === restoreDrawerHabitId) ?? null
+    if (habit) {
+      setDrawerExpandingToEdit(false)
+      setDrawerHabit(habit)
+    }
+    onRestoreDrawerHandled?.()
+  }, [restoreDrawerHabitId, habits, onRestoreDrawerHandled])
 
   const goalCompleteHabit = goalCompleteHabitId
     ? habits.find((habit) => habit.id === goalCompleteHabitId) ?? null

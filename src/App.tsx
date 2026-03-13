@@ -34,6 +34,7 @@ export default function App() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editHabit, setEditHabit] = useState<Habit | null>(null)
   const [editFromDrawer, setEditFromDrawer] = useState(false)
+  const [restoreDrawerHabitId, setRestoreDrawerHabitId] = useState<string | null>(null)
 
   const telegram = useTelegram()
   const { token, userId, isLoading: authLoading } = useAuth(telegram.getInitData)
@@ -277,9 +278,12 @@ export default function App() {
                 onGoalComplete={archiveHabit}
                 onGoalContinue={continueHabitWithoutGoal}
                 onEditHabit={(habit, fromDrawer = false) => {
+                  setRestoreDrawerHabitId(null)
                   setEditFromDrawer(fromDrawer)
                   setEditHabit(habit)
                 }}
+                restoreDrawerHabitId={restoreDrawerHabitId}
+                onRestoreDrawerHandled={() => setRestoreDrawerHabitId(null)}
               />
             )}
             {screen === 'analytics' && (
@@ -313,6 +317,7 @@ export default function App() {
         active={screen}
         onNavigate={navigateTo}
         onFabClick={() => {
+          setRestoreDrawerHabitId(null)
           setEditFromDrawer(false)
           setEditHabit(null)
           setCreateOpen(true)
@@ -321,10 +326,16 @@ export default function App() {
 
       <CreateHabit
         open={createOpen || !!editHabit}
-        onClose={() => {
+        onClose={(options) => {
+          const shouldRestoreDrawer =
+            Boolean(options?.reopenDrawer) && editFromDrawer && !!editHabit
+          const targetHabitId = shouldRestoreDrawer ? editHabit?.id ?? null : null
           setCreateOpen(false)
           setEditHabit(null)
           setEditFromDrawer(false)
+          if (targetHabitId) {
+            setRestoreDrawerHabitId(targetHabitId)
+          }
         }}
         onCreate={createHabit}
         onUpdate={updateHabitFromDraft}
