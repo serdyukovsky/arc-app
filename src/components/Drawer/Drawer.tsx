@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { createPortal } from 'react-dom'
 import styles from './Drawer.module.css'
 
 interface DrawerProps {
@@ -21,7 +22,9 @@ export function Drawer({ open, onClose, children, title }: DrawerProps) {
     }
   }, [open])
 
-  return (
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
@@ -34,18 +37,21 @@ export function Drawer({ open, onClose, children, title }: DrawerProps) {
             onClick={onClose}
           />
           <motion.div
-            className={styles.sheet}
+            className={styles.sheetViewport}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
           >
-            <div className={styles.handle} />
-            {title && <div className={styles.title}>{title}</div>}
-            {children}
+            <div className={styles.sheet}>
+              <div className={styles.handle} />
+              {title && <div className={styles.title}>{title}</div>}
+              {children}
+            </div>
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }

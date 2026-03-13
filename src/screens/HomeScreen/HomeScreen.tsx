@@ -55,6 +55,12 @@ const pluralRu = (value: number, one: string, few: string, many: string): string
   return many
 }
 
+const toValidDate = (value?: string | null): Date => {
+  const parsed = value ? new Date(value) : new Date()
+  if (Number.isNaN(parsed.getTime())) return new Date()
+  return parsed
+}
+
 export function HomeScreen({
   isHydrated,
   habits,
@@ -255,20 +261,23 @@ export function HomeScreen({
 
   const refDate = parseKey(activeDay)
   refDate.setHours(0, 0, 0, 0)
-  const createdDate = drawerHabit ? new Date(drawerHabit.created) : new Date()
+  const createdDate = toValidDate(drawerHabit?.created)
   createdDate.setHours(0, 0, 0, 0)
-  const daysSinceCreation = Math.max(
-    1,
-    drawerHabit ? Math.floor((refDate.getTime() - createdDate.getTime()) / 86400000) + 1 : 1
-  )
+  const diffMs = refDate.getTime() - createdDate.getTime()
+  const safeDaysDiff = Number.isFinite(diffMs) ? Math.floor(diffMs / 86400000) : 0
+  const daysSinceCreation = Math.max(1, safeDaysDiff + 1)
   const weeksSinceCreation = Math.max(1, Math.ceil(daysSinceCreation / 7))
   const startedLabel = drawerHabit
     ? createdDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
     : ''
 
-  const lifetimeDays = drawerHabit?.lifetimeDays ?? 0
+  const lifetimeDaysRaw = Number(drawerHabit?.lifetimeDays ?? 0)
+  const lifetimeDays = Number.isFinite(lifetimeDaysRaw) ? lifetimeDaysRaw : 0
   const completionBase = drawerHabit?.type === 'periodic' ? weeksSinceCreation : daysSinceCreation
-  const completionPercent = Math.min(100, Math.round((lifetimeDays / completionBase) * 100))
+  const completionRatio = completionBase > 0 ? lifetimeDays / completionBase : 0
+  const completionPercent = Number.isFinite(completionRatio)
+    ? Math.min(100, Math.round(completionRatio * 100))
+    : 0
 
   const drawerLogs = drawerHabit ? getLogsForHabit(drawerHabit.id) : []
   const counterTotal = drawerLogs.reduce((sum, log) => sum + log.value, 0)
@@ -412,15 +421,6 @@ export function HomeScreen({
               </>
             )}
 
-            <button
-              type="button"
-              className={styles.drawerGhostBtn}
-              onClick={() => {
-                setDrawerHabit(null)
-              }}
-            >
-              Изменить
-            </button>
           </div>
         )}
       </Drawer>
