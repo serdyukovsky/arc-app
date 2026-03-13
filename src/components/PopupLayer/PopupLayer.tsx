@@ -76,7 +76,7 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
       <div className={styles.bannerHost}>
         <motion.div
           key={`banner-${popupEvent.order}`}
-          className={`${styles.banner} ${styles.bannerVisible}`}
+          className={styles.banner}
           initial={{ top: -120, opacity: 0 }}
           animate={{ top: 10, opacity: 1 }}
           exit={{ top: -120, opacity: 0 }}
@@ -133,7 +133,7 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
     return (
       <motion.div
         key={`modal-${popupEvent.order}`}
-        className={`${styles['modal-overlay']} ${styles.modalOverlayVisible}`}
+        className={styles['modal-overlay']}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -262,7 +262,9 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
   return createPortal(
     <div className={styles.layerRoot}>
       <PopupIllustrationSymbols />
-      <AnimatePresence initial={false}>{event ? renderPopup(event) : null}</AnimatePresence>
+      <AnimatePresence initial={false} mode="wait">
+        {event ? renderPopup(event) : null}
+      </AnimatePresence>
     </div>,
     document.body
   )
