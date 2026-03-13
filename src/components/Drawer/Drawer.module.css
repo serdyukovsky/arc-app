@@ -9,11 +9,9 @@
 .sheetViewport {
   position: fixed;
   bottom: 0;
-  left: var(--safe-left);
-  right: var(--safe-right);
+  left: 0;
+  right: 0;
   z-index: 910;
-  display: flex;
-  justify-content: center;
   pointer-events: none;
 }
 
@@ -21,10 +19,10 @@
   width: 100%;
   background: #fff;
   border-radius: 2rem 2rem 0 0;
-  padding: 1.5rem 1.5rem calc(1.5rem + var(--safe-bottom));
+  padding: 1.5rem calc(1.5rem + var(--safe-right)) calc(1.5rem + var(--safe-bottom))
+    calc(1.5rem + var(--safe-left));
   max-height: 85vh;
   overflow-y: auto;
-  max-width: 390px;
   pointer-events: auto;
   box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.12);
 }
