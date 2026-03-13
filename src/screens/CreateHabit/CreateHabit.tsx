@@ -22,10 +22,15 @@ type CreateHabitData = Omit<
   | 'milestones'
 >
 
+export type { CreateHabitData }
+
 interface CreateHabitProps {
   open: boolean
   onClose: () => void
   onCreate: (data: CreateHabitData) => Promise<any>
+  onUpdate?: (habitId: string, data: CreateHabitData) => Promise<any>
+  editingHabit?: Habit | null
+  fullScreen?: boolean
   showToast: (msg: string) => void
 }
 
@@ -45,7 +50,15 @@ const stepTransition = {
   exit: { opacity: 0 },
 }
 
-export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitProps) {
+export function CreateHabit({
+  open,
+  onClose,
+  onCreate,
+  onUpdate,
+  editingHabit = null,
+  fullScreen = false,
+  showToast,
+}: CreateHabitProps) {
   const [step, setStep] = useState(1)
   const [name, setName] = useState('')
   const [category, setCategory] = useState<Category | null>(null)
@@ -56,7 +69,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
   const [isSubmitting, setIsSubmitting] = useState(false)
   const submitLockRef = useRef(false)
 
-  const reset = () => {
+  const resetCreate = () => {
     setStep(1)
     setName('')
     setCategory(null)
@@ -68,10 +81,26 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
     submitLockRef.current = false
   }
 
+  const resetEdit = (habit: Habit) => {
+    setStep(1)
+    setName(habit.name)
+    setCategory(habit.category)
+    setType(habit.type)
+    setGoal(habit.type === 'daily' ? 1 : habit.goal)
+    setGoalDays(habit.goalDays ?? habit.daysGoal ?? null)
+    setReminder(habit.reminder)
+    setIsSubmitting(false)
+    submitLockRef.current = false
+  }
+
   useEffect(() => {
     if (!open) return
-    reset()
-  }, [open])
+    if (editingHabit) {
+      resetEdit(editingHabit)
+      return
+    }
+    resetCreate()
+  }, [open, editingHabit?.id])
 
   const canGoNext = useMemo(() => {
     if (step === 1) return name.trim().length > 0 && !!category
@@ -97,24 +126,36 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
     submitLockRef.current = true
     triggerHaptic('success')
     setIsSubmitting(true)
-    const created = await onCreate({
+    const payload: CreateHabitData = {
       name: name.trim(),
       category,
       type,
       goal: type === 'daily' ? 1 : goal,
       goalDays,
       reminder,
-    })
+    }
 
-    if (created) {
-      showToast(`«${name.trim()}» добавлено ✓`)
-      onClose()
-      return
+    if (editingHabit && onUpdate) {
+      const updated = await onUpdate(editingHabit.id, payload)
+      if (updated) {
+        showToast(`«${name.trim()}» обновлено ✓`)
+        onClose()
+        return
+      }
+    } else {
+      const created = await onCreate(payload)
+      if (created) {
+        showToast(`«${name.trim()}» добавлено ✓`)
+        onClose()
+        return
+      }
     }
 
     submitLockRef.current = false
     setIsSubmitting(false)
   }
+
+  const isEditMode = !!editingHabit
 
   const handleBack = () => {
     if (isSubmitting) return
@@ -130,7 +171,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
     <AnimatePresence>
       {open && (
         <motion.div
-          className={styles.overlay}
+          className={`${styles.overlay} ${fullScreen ? styles.overlayFull : ''}`}
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 12 }}
@@ -197,7 +238,15 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
               disabled={!canGoNext || isSubmitting}
               onClick={() => void handleNext()}
             >
-              {step === 3 ? (isSubmitting ? 'Создаём...' : 'Создать привычку ✓') : 'Далее →'}
+              {step === 3
+                ? isSubmitting
+                  ? isEditMode
+                    ? 'Сохраняем...'
+                    : 'Создаём...'
+                  : isEditMode
+                    ? 'Сохранить'
+                    : 'Создать привычку ✓'
+                : 'Далее →'}
             </button>
           </div>
         </motion.div>

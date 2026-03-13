@@ -74,15 +74,19 @@
 }
 
 .drawerIconAction {
-  width: 34px;
   height: 34px;
   border: none;
-  border-radius: 50%;
+  border-radius: 999px;
   background: #f3f3f3;
   color: #000;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0.35rem;
+  padding: 0 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
   flex-shrink: 0;
 }

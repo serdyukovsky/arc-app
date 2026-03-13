@@ -1,13 +1,18 @@
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 300;
+  z-index: 960;
   background: #fff;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   max-width: 390px;
   margin: 0 auto;
+}
+
+.overlayFull {
+  max-width: none;
+  margin: 0;
 }
 
 .header {

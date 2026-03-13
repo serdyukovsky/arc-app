@@ -37,6 +37,7 @@ interface HomeScreenProps {
   } | null
   onGoalComplete: (habitId: string) => void
   onGoalContinue: (habitId: string) => void
+  onEditHabit: (habit: Habit) => void
 }
 
 const counterUnit = (name: string): string => {
@@ -78,6 +79,7 @@ export function HomeScreen({
   updateMilestoneState,
   onGoalComplete,
   onGoalContinue,
+  onEditHabit,
 }: HomeScreenProps) {
   const [drawerHabit, setDrawerHabit] = useState<Habit | null>(null)
   const [pulseHabitId, setPulseHabitId] = useState<string | null>(null)
@@ -347,9 +349,14 @@ export function HomeScreen({
                 type="button"
                 className={styles.drawerIconAction}
                 aria-label="Изменить привычку"
-                onClick={() => setDrawerHabit(null)}
+                onClick={() => {
+                  const habitToEdit = drawerHabit
+                  setDrawerHabit(null)
+                  onEditHabit(habitToEdit)
+                }}
               >
                 <Icon name="edit" size={20} />
+                <span>Изменить</span>
               </button>
             </div>
 

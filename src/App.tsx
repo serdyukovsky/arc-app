@@ -13,7 +13,7 @@ import { HomeScreen } from '@/screens/HomeScreen/HomeScreen'
 import { AnalyticsScreen } from '@/screens/AnalyticsScreen/AnalyticsScreen'
 import { ArchiveScreen } from '@/screens/ArchiveScreen/ArchiveScreen'
 import { ProfileScreen } from '@/screens/ProfileScreen/ProfileScreen'
-import { CreateHabit } from '@/screens/CreateHabit/CreateHabit'
+import { CreateHabit, type CreateHabitData } from '@/screens/CreateHabit/CreateHabit'
 import styles from './App.module.css'
 
 const screenTransition = {
@@ -32,6 +32,7 @@ const areMilestonesEqual = (a: number[] | null, b: number[] | null): boolean => 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
   const [createOpen, setCreateOpen] = useState(false)
+  const [editHabit, setEditHabit] = useState<Habit | null>(null)
 
   const telegram = useTelegram()
   const { token, userId, isLoading: authLoading } = useAuth(telegram.getInitData)
@@ -41,6 +42,7 @@ export default function App() {
     habits,
     isLoading: habitsLoading,
     createHabit,
+    updateHabit,
     updateHabitLocal,
     archiveHabit,
     unarchiveHabit,
@@ -154,6 +156,37 @@ export default function App() {
     })
   }
 
+  const updateHabitFromDraft = async (habitId: string, data: CreateHabitData) => {
+    const existing = habitsRef.current.find((habit) => habit.id === habitId)
+    if (!existing) return false
+
+    const goalDays = data.goalDays ?? null
+    const milestones = buildMilestones(goalDays, data.type)
+    const streak = getStreak(habitId, data.type, data.goal)
+    const bestStreak = existing.type === data.type
+      ? Math.max(existing.bestStreak ?? 0, streak)
+      : streak
+    const goalCompleted = goalDays !== null && streak >= goalDays
+    const currentMilestoneIndex = getCurrentMilestoneIndex(streak, data.type, milestones)
+
+    await updateHabit(habitId, {
+      name: data.name,
+      category: data.category,
+      type: data.type,
+      goal: data.type === 'daily' ? 1 : data.goal,
+      goalDays,
+      daysGoal: goalDays,
+      reminder: data.reminder,
+      streak,
+      bestStreak,
+      goalCompleted,
+      currentMilestoneIndex,
+      milestones,
+    })
+
+    return true
+  }
+
   const todayDoneCount = useMemo(
     () => activeHabits.filter((habit) => isHabitDoneToday(habit)).length,
     [activeHabits, logs]
@@ -242,6 +275,7 @@ export default function App() {
                 updateMilestoneState={updateMilestoneState}
                 onGoalComplete={archiveHabit}
                 onGoalContinue={continueHabitWithoutGoal}
+                onEditHabit={(habit) => setEditHabit(habit)}
               />
             )}
             {screen === 'analytics' && (
@@ -274,13 +308,22 @@ export default function App() {
       <NavBar
         active={screen}
         onNavigate={navigateTo}
-        onFabClick={() => setCreateOpen(true)}
+        onFabClick={() => {
+          setEditHabit(null)
+          setCreateOpen(true)
+        }}
       />
 
       <CreateHabit
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
+        open={createOpen || !!editHabit}
+        onClose={() => {
+          setCreateOpen(false)
+          setEditHabit(null)
+        }}
         onCreate={createHabit}
+        onUpdate={updateHabitFromDraft}
+        editingHabit={editHabit}
+        fullScreen={!!editHabit}
         showToast={showToast}
       />
 
