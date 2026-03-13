@@ -149,7 +149,7 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
           onClick={(e) => e.stopPropagation()}
         >
           <div className={styles.modal__illo}>
-            <svg width="176" height="152" viewBox="0 0 150 130" fill="none" aria-hidden="true">
+            <svg width="210" height="182" viewBox="0 0 150 130" fill="none" aria-hidden="true">
               <use href={getModalSymbolId(popupEvent.type)} />
             </svg>
           </div>
