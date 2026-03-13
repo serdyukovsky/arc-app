@@ -14,7 +14,7 @@
   display: flex;
   justify-content: center;
   padding:
-    calc(10px + var(--safe-top) + var(--safe-top-gap) + var(--tg-top-controls, 0px))
+    calc(34px + var(--safe-top) + var(--safe-top-gap) + var(--tg-top-controls, 0px))
     10px
     0;
 }
