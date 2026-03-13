@@ -167,6 +167,11 @@ export default function App() {
       if (habit.type !== 'periodic') {
         return isHabitDoneToday(habit, dateKey)
       }
+
+      if (isHabitDoneToday(habit, dateKey)) {
+        return true
+      }
+
       const weekDone = getWeekDoneCountRef.current(habit.id, dateKey)
       const remainingDays = getRemainingDaysInWeek(parseKey(dateKey))
       return weekDone >= habit.goal || isDeadWeek(weekDone, habit.goal, remainingDays)
@@ -534,7 +539,241 @@ export default function App() {
   }, [isHomeHydrated, checkAllDone, checkFreezeOffer, checkStreakLost])
 
   useEffect(() => {
+    if (!isHomeHydrated) return
+    checkAllDone()
+  }, [isHomeHydrated, logs, habits, checkAllDone])
+
+  useEffect(() => {
     if (typeof window === 'undefined') return
+    const root = globalThis as any
+    const resolveHabit = (habitId: string): Habit | null => {
+      const allHabits = habitsRef.current
+      if (allHabits.length === 0) return null
+
+      const exact = allHabits.find((habit) => habit.id === habitId)
+      if (exact) return exact
+
+      const normalized = habitId.toLowerCase()
+      const bySuffix = allHabits.find((habit) => habit.id.toLowerCase().endsWith(normalized))
+      if (bySuffix) return bySuffix
+
+      const byName = allHabits.find((habit) => habit.name.toLowerCase().includes(normalized))
+      if (byName) return byName
+
+      return allHabits[0]
+    }
+
+    const getStateMap = () => {
+      const map: Record<string, Habit> = {}
+      habitsRef.current.forEach((habit, index) => {
+        map[habit.id] = habit
+        const shortId = habit.id.split('-').pop()
+        if (shortId) map[shortId] = habit
+        const compactNameKey = habit.name.toLowerCase().replace(/\s+/g, '')
+        if (compactNameKey) map[compactNameKey] = habit
+        map[`habit${index + 1}`] = habit
+      })
+      return map
+    }
+
+    const resolveDebugHabit = (
+      habitId: string,
+      fallbackType: Habit['type'] = 'daily'
+    ): { id: string; name: string; type: Habit['type']; goal: number } => {
+      const id = (habitId ?? '').trim()
+      const habit = id ? resolveHabit(id) : habitsRef.current[0] ?? null
+      if (habit) {
+        return {
+          id: habit.id,
+          name: habit.name,
+          type: habit.type,
+          goal: habit.goal,
+        }
+      }
+
+      const fallbackId = id || 'debug-habit'
+      return {
+        id: fallbackId,
+        name: fallbackId,
+        type: fallbackType,
+        goal: 1,
+      }
+    }
+
+    const enqueueDebug = (event: PopupEventInput) => {
+      enqueuePopup(event)
+      return event
+    }
+
+    const debug = {
+      streakLost: (habitId: string = 'water') => {
+        const habit = resolveDebugHabit(habitId, 'daily')
+        return enqueueDebug({
+          type: 'streak_lost',
+          habitId: habit.id,
+          priority: 2,
+          data: {
+            habitName: habit.name,
+            streak: 12,
+            habitType: habit.type,
+          },
+        })
+      },
+      milestone: (habitId: string = 'water', streak: number = 7) => {
+        const habit = resolveDebugHabit(habitId, 'daily')
+        return enqueueDebug({
+          type: 'milestone_reached',
+          habitId: habit.id,
+          priority: 3,
+          data: {
+            habitName: habit.name,
+            streak,
+            milestone: streak,
+            habitType: habit.type,
+          },
+        })
+      },
+      freeze: (habitId: string = 'water') => {
+        const habit = resolveDebugHabit(habitId, 'daily')
+        return enqueueDebug({
+          type: 'freeze_offer',
+          habitId: habit.id,
+          priority: 2,
+          data: {
+            habitName: habit.name,
+            habitType: habit.type,
+            hoursLeft: 2,
+            weekDone: 1,
+            weekGoal: habit.type === 'periodic' ? habit.goal : 3,
+            daysLeft: 1,
+          },
+        })
+      },
+      allDone: (seriesDays: number = 18) =>
+        enqueueDebug({
+          type: 'all_done',
+          habitId: null,
+          priority: 1,
+          data: {
+            completedCount: 3,
+            seriesDays,
+            weekCompletion: 74,
+            timeOfDay: 'evening',
+            streaks: [
+              { name: 'Вода', streak: 12, unit: 'д' },
+              { name: 'Чтение', streak: 7, unit: 'д' },
+            ],
+          },
+        }),
+      allDoneLate: (seriesDays: number = 18) =>
+        enqueueDebug({
+          type: 'all_done',
+          habitId: null,
+          priority: 1,
+          data: {
+            completedCount: 3,
+            seriesDays,
+            weekCompletion: 74,
+            timeOfDay: 'late',
+            streaks: [
+              { name: 'Вода', streak: 12, unit: 'д' },
+              { name: 'Чтение', streak: 7, unit: 'д' },
+            ],
+          },
+        }),
+      firstComplete: (habitId: string = 'read') => {
+        const habit = resolveDebugHabit(habitId, 'daily')
+        return enqueueDebug({
+          type: 'first_complete',
+          habitId: habit.id,
+          priority: 2,
+          data: {
+            habitName: habit.name,
+            habitType: habit.type,
+          },
+        })
+      },
+      goalDone: (habitId: string = 'water', goalDays: number = 66) => {
+        const habit = resolveDebugHabit(habitId, 'daily')
+        return enqueueDebug({
+          type: 'goal_reached',
+          habitId: habit.id,
+          priority: 1,
+          data: {
+            habitName: habit.name,
+            goalDays,
+            streak: goalDays,
+            lifetimeDays: 47,
+            habitType: habit.type,
+          },
+        })
+      },
+      clearQueue: () => {
+        clearPopups()
+      },
+      showQueue: () => {
+        const rows = popupStateRef.current.queue.map((item) => ({
+          order: item.order,
+          type: item.type,
+          habitId: item.habitId,
+          priority: item.priority,
+        }))
+        const active = popupStateRef.current.active
+        if (active) {
+          rows.unshift({
+            order: active.order,
+            type: `${active.type} (active)`,
+            habitId: active.habitId,
+            priority: active.priority,
+          })
+        }
+        console.table(rows)
+        return rows
+      },
+      help: () => {
+        const lines = [
+          'DEBUG helpers:',
+          'DEBUG.streakLost()',
+          "DEBUG.streakLost('water')",
+          'DEBUG.milestone()',
+          "DEBUG.milestone('water', 7)",
+          "DEBUG.freeze('water')",
+          'DEBUG.allDone(18)',
+          'DEBUG.allDoneLate(18)',
+          "DEBUG.firstComplete('read')",
+          "DEBUG.goalDone('water', 66)",
+          'DEBUG.showQueue()',
+          'DEBUG.checkAllDone()',
+          'DEBUG.clearQueue()',
+          'DEBUG.resetFlags()',
+        ]
+        console.info(lines.join('\n'))
+        return lines
+      },
+      resetFlags: () => {
+        habitsRef.current.forEach((habit) => {
+          updateHabitLocal(habit.id, {
+            firstCompleted: false,
+            lastStreakLostShown: null,
+            milestonePopupCount: 0,
+            lastFreezeOfferShown: null,
+          })
+        })
+        setPopupState((prev) => ({ ...prev, allDoneShownToday: null }))
+      },
+      checkAllDone: () => checkAllDone(),
+      getState: () => popupStateRef.current,
+    }
+
+    const stateProxy = new Proxy(getStateMap(), {
+      get(target, prop: string | symbol) {
+        if (prop === 'popupState') return popupStateRef.current
+        if (typeof prop !== 'string') return undefined
+        if (prop in target) return target[prop]
+        return resolveHabit(prop) ?? undefined
+      },
+    })
+
     const popupApi = {
       getState: () => popupStateRef.current,
       priorities: POPUP_PRIORITY,
@@ -552,8 +791,18 @@ export default function App() {
         getYesterdayString,
       },
     }
-    ;(window as any).popupState = popupStateRef.current
-    ;(window as any).popupApi = popupApi
+
+    Object.defineProperty(root, 'popupState', {
+      configurable: true,
+      get: () => popupStateRef.current,
+    })
+
+    root.state = stateProxy
+    root.popupApi = popupApi
+    root.DEBUG = debug
+    root.debug = debug
+    root.enqueuePopup = enqueuePopup
+    root.processQueue = closeActivePopup
   }, [
     popupState,
     enqueuePopup,
@@ -562,6 +811,7 @@ export default function App() {
     checkAllDone,
     checkStreakLost,
     checkFreezeOffer,
+    updateHabitLocal,
   ])
 
   const todayDoneCount = useMemo(

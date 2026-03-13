@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import type { HabitLog } from '@/types'
 import { pbRequest } from '@/lib/pb'
 import { today, daysAgo, toKey, parseKey } from '@/lib/date'
@@ -114,12 +114,16 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
   const [isLoading, setIsLoading] = useState(true)
   const [syncedHabitIdsKey, setSyncedHabitIdsKey] = useState('')
   const habitIdsKey = useMemo(() => habitIds.join(','), [habitIds])
+  const logsRef = useRef<HabitLog[]>([])
 
   const fetchLogs = useCallback(async () => {
     if (!token) {
       if (import.meta.env.DEV) {
-        setLogs(loadDevLogs(habitIds))
+        const next = loadDevLogs(habitIds)
+        logsRef.current = next
+        setLogs(next)
       } else {
+        logsRef.current = []
         setLogs([])
       }
       setSyncedHabitIdsKey(habitIdsKey)
@@ -128,6 +132,7 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
     }
 
     if (habitIds.length === 0) {
+      logsRef.current = []
       setLogs([])
       setSyncedHabitIdsKey(habitIdsKey)
       setIsLoading(false)
@@ -143,7 +148,9 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
     )
 
     if (res.ok && res.data?.items) {
-      setLogs(normalizeLogs(res.data.items))
+      const next = normalizeLogs(res.data.items)
+      logsRef.current = next
+      setLogs(next)
     }
 
     setSyncedHabitIdsKey(habitIdsKey)
@@ -201,18 +208,24 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
     fetchLogs()
   }, [fetchLogs])
 
+  useEffect(() => {
+    logsRef.current = logs
+  }, [logs])
+
   const logHabit = useCallback(
     async (habitId: string, value: number = 1) => {
       const dateKey = today()
+      const currentLogs = logsRef.current
 
       if (!token) {
         if (!import.meta.env.DEV) return null
 
-        const existing = logs.find((l) => l.habit === habitId && l.date === dateKey)
+        const existing = currentLogs.find((l) => l.habit === habitId && l.date === dateKey)
         if (existing) {
           const updated = { ...existing, value: existing.value + value }
           setLogs((prev) => {
             const next = normalizeLogs(prev.map((l) => (l.id === existing.id ? updated : l)))
+            logsRef.current = next
             saveDevLogs(next)
             return next
           })
@@ -229,6 +242,7 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
 
         setLogs((prev) => {
           const next = normalizeLogs([newLog, ...prev])
+          logsRef.current = next
           saveDevLogs(next)
           return next
         })
@@ -236,12 +250,14 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
         return newLog
       }
 
-      const existing = logs.find((l) => l.habit === habitId && l.date === dateKey)
+      const existing = currentLogs.find((l) => l.habit === habitId && l.date === dateKey)
       if (existing) {
         const newValue = existing.value + value
-        setLogs((prev) =>
-          prev.map((l) => (l.id === existing.id ? { ...l, value: newValue } : l))
-        )
+        setLogs((prev) => {
+          const next = prev.map((l) => (l.id === existing.id ? { ...l, value: newValue } : l))
+          logsRef.current = next
+          return next
+        })
         const res = await pbRequest<HabitLog>(
           `/api/collections/habit_logs/records/${existing.id}`,
           { method: 'PATCH', token, body: { value: newValue } }
@@ -263,45 +279,66 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
         created: new Date().toISOString(),
       }
 
-      setLogs((prev) => [tempLog, ...prev])
+      setLogs((prev) => {
+        const next = [tempLog, ...prev]
+        logsRef.current = next
+        return next
+      })
       const res = await createRemoteLog(habitId, dateKey, value)
 
       if (res.ok && res.data) {
-        setLogs((prev) => prev.map((l) => (l.id === tempId ? res.data! : l)))
+        setLogs((prev) => {
+          const next = prev.map((l) => (l.id === tempId ? res.data! : l))
+          logsRef.current = next
+          return next
+        })
         return res.data
       }
 
       const fallbackLog = await findLogByHabitAndDate(habitId, dateKey)
       if (fallbackLog) {
-        setLogs((prev) => prev.map((l) => (l.id === tempId ? fallbackLog : l)))
+        setLogs((prev) => {
+          const next = prev.map((l) => (l.id === tempId ? fallbackLog : l))
+          logsRef.current = next
+          return next
+        })
         return fallbackLog
       }
 
       console.warn('[useHabitLogs] Failed to create log', { habitId, status: res.status, data: res.data })
-      setLogs((prev) => prev.filter((l) => l.id !== tempId))
+      setLogs((prev) => {
+        const next = prev.filter((l) => l.id !== tempId)
+        logsRef.current = next
+        return next
+      })
       void fetchLogs()
       return null
     },
-    [token, logs, fetchLogs, createRemoteLog, findLogByHabitAndDate]
+    [token, fetchLogs, createRemoteLog, findLogByHabitAndDate]
   )
 
   const undoLog = useCallback(
     async (habitId: string): Promise<boolean> => {
       const dateKey = today()
-      const existing = logs.find((l) => l.habit === habitId && l.date === dateKey)
+      const existing = logsRef.current.find((l) => l.habit === habitId && l.date === dateKey)
       if (!existing) return false
 
       if (!token) {
         if (!import.meta.env.DEV) return false
         setLogs((prev) => {
           const next = normalizeLogs(prev.filter((l) => l.id !== existing.id))
+          logsRef.current = next
           saveDevLogs(next)
           return next
         })
         return true
       }
 
-      setLogs((prev) => prev.filter((l) => l.id !== existing.id))
+      setLogs((prev) => {
+        const next = prev.filter((l) => l.id !== existing.id)
+        logsRef.current = next
+        return next
+      })
       const res = await pbRequest(`/api/collections/habit_logs/records/${existing.id}`, {
         method: 'DELETE',
         token,
@@ -313,32 +350,32 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
       }
       return true
     },
-    [token, logs, fetchLogs]
+    [token, fetchLogs]
   )
 
   const getLogsForHabit = useCallback(
-    (habitId: string): HabitLog[] => logs.filter((l) => l.habit === habitId),
-    [logs]
+    (habitId: string): HabitLog[] => logsRef.current.filter((l) => l.habit === habitId),
+    []
   )
 
   const getDoneDates = useCallback(
     (habitId: string): Set<string> => {
       const dates = new Set<string>()
-      logs.forEach((l) => {
+      logsRef.current.forEach((l) => {
         if (l.habit === habitId && l.value > 0) dates.add(l.date)
       })
       return dates
     },
-    [logs]
+    []
   )
 
   const getTodayValue = useCallback(
     (habitId: string, dateKey?: string): number => {
       const targetDate = dateKey ?? today()
-      const log = logs.find((l) => l.habit === habitId && l.date === targetDate)
+      const log = logsRef.current.find((l) => l.habit === habitId && l.date === targetDate)
       return log?.value ?? 0
     },
-    [logs]
+    []
   )
 
   const isDoneToday = useCallback(
@@ -386,11 +423,11 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
         d.setHours(0, 0, 0, 0)
         if (d.getTime() > ref.getTime()) break
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-        if (logs.some((l) => l.habit === habitId && l.date === key && l.value > 0)) count++
+        if (logsRef.current.some((l) => l.habit === habitId && l.date === key && l.value > 0)) count++
       }
       return count
     },
-    [logs]
+    []
   )
 
   const todayCompletedCount = useMemo(() => {
