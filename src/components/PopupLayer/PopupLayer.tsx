@@ -66,9 +66,9 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
         <motion.div
           key={`banner-${popupEvent.order}`}
           className={styles.banner}
-          initial={{ top: -120, opacity: 0 }}
-          animate={{ top: 10, opacity: 1 }}
-          exit={{ top: -120, opacity: 0 }}
+          initial={{ y: -140, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -140, opacity: 0 }}
           transition={bannerTransition}
         >
           <div className={styles.bannerTop}>

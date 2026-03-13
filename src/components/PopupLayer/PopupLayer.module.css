@@ -7,19 +7,19 @@
 
 .bannerHost {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: var(--safe-left);
+  right: var(--safe-right);
   top: 0;
   pointer-events: none;
+  display: flex;
+  justify-content: center;
+  padding: calc(10px + var(--safe-top)) 10px 0;
 }
 
 .banner {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  right: 10px;
+  position: relative;
   margin: 0 auto;
-  width: calc(100% - 20px);
+  width: 100%;
   max-width: 420px;
   background: #111;
   border-radius: 18px;
@@ -102,8 +102,8 @@
 
 .modalSheetWrap {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: var(--safe-left);
+  right: var(--safe-right);
   bottom: 0;
   display: flex;
   justify-content: center;
@@ -113,7 +113,7 @@
 .modalSheet {
   width: 100%;
   max-width: 430px;
-  max-height: 92dvh;
+  max-height: min(92dvh, calc(100dvh - var(--safe-top)));
   overflow-y: auto;
   background: #111;
   border-radius: 28px 28px 0 0;
