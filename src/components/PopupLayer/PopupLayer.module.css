@@ -13,7 +13,10 @@
   pointer-events: none;
   display: flex;
   justify-content: center;
-  padding: calc(10px + var(--safe-top)) 10px 0;
+  padding:
+    calc(10px + var(--safe-top) + var(--safe-top-gap) + var(--tg-top-controls, 0px))
+    10px
+    0;
 }
 
 .banner {
@@ -113,7 +116,11 @@
 .modalSheet {
   width: 100%;
   max-width: 430px;
-  max-height: min(92dvh, calc(100dvh - var(--safe-top)));
+  max-height:
+    min(
+      92dvh,
+      calc(100dvh - var(--safe-top) - var(--safe-top-gap) - var(--tg-top-controls, 0px))
+    );
   overflow-y: auto;
   background: #111;
   border-radius: 28px 28px 0 0;

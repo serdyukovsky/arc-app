@@ -31,6 +31,7 @@
   --safe-right-js: 0px;
   --safe-bottom-js: 0px;
   --safe-left-js: 0px;
+  --tg-top-controls-js: 0px;
   --safe-top: max(
     env(safe-area-inset-top, 0px),
     var(--tg-content-safe-area-inset-top, 0px),
@@ -55,6 +56,7 @@
     var(--tg-safe-area-inset-left, 0px),
     var(--safe-left-js)
   );
+  --tg-top-controls: max(0px, var(--tg-top-controls-js));
 }
 
 html,
