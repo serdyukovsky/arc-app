@@ -25,6 +25,11 @@ export interface Habit {
   goalCompleted: boolean
   currentMilestoneIndex: number
   milestones: number[] | null
+  firstCompleted: boolean
+  lastStreakLostShown: string | null
+  lastFreezeOfferShown: string | null
+  milestonePopupCount: number
+  freezesAvailable: number
   reminder: 'none' | 'morning' | 'day' | 'evening'
   created: string
   isArchived: boolean

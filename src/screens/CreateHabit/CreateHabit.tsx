@@ -20,6 +20,11 @@ type CreateHabitData = Omit<
   | 'goalCompleted'
   | 'currentMilestoneIndex'
   | 'milestones'
+  | 'firstCompleted'
+  | 'lastStreakLostShown'
+  | 'lastFreezeOfferShown'
+  | 'milestonePopupCount'
+  | 'freezesAvailable'
 >
 
 export type { CreateHabitData }

@@ -14,7 +14,20 @@ const areMilestonesEqual = (a: number[] | null, b: number[] | null): boolean => 
 }
 
 const withMilestoneDefaults = (
-  habit: Omit<Habit, 'streak' | 'bestStreak' | 'lifetimeDays' | 'goalCompleted' | 'currentMilestoneIndex' | 'milestones'>
+  habit: Omit<
+    Habit,
+    | 'streak'
+    | 'bestStreak'
+    | 'lifetimeDays'
+    | 'goalCompleted'
+    | 'currentMilestoneIndex'
+    | 'milestones'
+    | 'firstCompleted'
+    | 'lastStreakLostShown'
+    | 'lastFreezeOfferShown'
+    | 'milestonePopupCount'
+    | 'freezesAvailable'
+  >
 ): Habit => {
   const goalDays = habit.goalDays ?? habit.daysGoal ?? null
   const milestones = buildMilestones(goalDays, habit.type)
@@ -28,6 +41,11 @@ const withMilestoneDefaults = (
     goalCompleted: false,
     currentMilestoneIndex: getCurrentMilestoneIndex(0, habit.type, milestones),
     milestones,
+    firstCompleted: false,
+    lastStreakLostShown: null,
+    lastFreezeOfferShown: null,
+    milestonePopupCount: 0,
+    freezesAvailable: 0,
   }
 }
 
@@ -52,6 +70,11 @@ const normalizeHabit = (habit: Habit): Habit => {
     currentMilestoneIndex:
       habit.currentMilestoneIndex ?? getCurrentMilestoneIndex(streak, habit.type, milestones),
     milestones,
+    firstCompleted: habit.firstCompleted ?? false,
+    lastStreakLostShown: habit.lastStreakLostShown ?? null,
+    lastFreezeOfferShown: habit.lastFreezeOfferShown ?? null,
+    milestonePopupCount: habit.milestonePopupCount ?? 0,
+    freezesAvailable: habit.freezesAvailable ?? 0,
   }
 }
 
@@ -260,7 +283,27 @@ export function useHabits(token: string | null, userId: string | null) {
   }, [fetchHabits])
 
   const createHabit = useCallback(
-    async (data: Omit<Habit, 'id' | 'created' | 'isArchived' | 'order' | 'user' | 'streak' | 'bestStreak' | 'lifetimeDays' | 'goalCompleted' | 'currentMilestoneIndex' | 'milestones'>) => {
+    async (
+      data: Omit<
+        Habit,
+        | 'id'
+        | 'created'
+        | 'isArchived'
+        | 'order'
+        | 'user'
+        | 'streak'
+        | 'bestStreak'
+        | 'lifetimeDays'
+        | 'goalCompleted'
+        | 'currentMilestoneIndex'
+        | 'milestones'
+        | 'firstCompleted'
+        | 'lastStreakLostShown'
+        | 'lastFreezeOfferShown'
+        | 'milestonePopupCount'
+        | 'freezesAvailable'
+      >
+    ) => {
       if (!token) {
         if (!import.meta.env.DEV) return null
 
@@ -334,6 +377,11 @@ export function useHabits(token: string | null, userId: string | null) {
         goalCompleted,
         currentMilestoneIndex,
         milestones,
+        firstCompleted,
+        lastStreakLostShown,
+        lastFreezeOfferShown,
+        milestonePopupCount,
+        freezesAvailable,
         goalDays,
         daysGoal,
         ...rest
