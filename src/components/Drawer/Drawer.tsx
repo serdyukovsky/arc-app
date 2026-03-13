@@ -8,9 +8,18 @@ interface DrawerProps {
   onClose: () => void
   children: React.ReactNode
   title?: string
+  fullScreen?: boolean
+  hideHandle?: boolean
 }
 
-export function Drawer({ open, onClose, children, title }: DrawerProps) {
+export function Drawer({
+  open,
+  onClose,
+  children,
+  title,
+  fullScreen = false,
+  hideHandle = false,
+}: DrawerProps) {
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden'
@@ -43,11 +52,15 @@ export function Drawer({ open, onClose, children, title }: DrawerProps) {
             exit={{ y: '100%' }}
             transition={{ duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
           >
-            <div className={styles.sheet}>
-              <div className={styles.handle} />
+            <motion.div
+              layout
+              className={`${styles.sheet} ${fullScreen ? styles.sheetFull : ''}`}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {!hideHandle && <div className={styles.handle} />}
               {title && <div className={styles.title}>{title}</div>}
               {children}
-            </div>
+            </motion.div>
           </motion.div>
         </>
       )}

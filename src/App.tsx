@@ -33,6 +33,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
   const [createOpen, setCreateOpen] = useState(false)
   const [editHabit, setEditHabit] = useState<Habit | null>(null)
+  const [editFromDrawer, setEditFromDrawer] = useState(false)
 
   const telegram = useTelegram()
   const { token, userId, isLoading: authLoading } = useAuth(telegram.getInitData)
@@ -275,7 +276,10 @@ export default function App() {
                 updateMilestoneState={updateMilestoneState}
                 onGoalComplete={archiveHabit}
                 onGoalContinue={continueHabitWithoutGoal}
-                onEditHabit={(habit) => setEditHabit(habit)}
+                onEditHabit={(habit, fromDrawer = false) => {
+                  setEditFromDrawer(fromDrawer)
+                  setEditHabit(habit)
+                }}
               />
             )}
             {screen === 'analytics' && (
@@ -309,6 +313,7 @@ export default function App() {
         active={screen}
         onNavigate={navigateTo}
         onFabClick={() => {
+          setEditFromDrawer(false)
           setEditHabit(null)
           setCreateOpen(true)
         }}
@@ -319,11 +324,13 @@ export default function App() {
         onClose={() => {
           setCreateOpen(false)
           setEditHabit(null)
+          setEditFromDrawer(false)
         }}
         onCreate={createHabit}
         onUpdate={updateHabitFromDraft}
         editingHabit={editHabit}
         fullScreen={!!editHabit}
+        disableEnterAnimation={editFromDrawer}
         showToast={showToast}
       />
 

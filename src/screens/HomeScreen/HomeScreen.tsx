@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Habit, HabitLog } from '@/types'
 import { CATEGORIES } from '@/types'
@@ -37,7 +37,7 @@ interface HomeScreenProps {
   } | null
   onGoalComplete: (habitId: string) => void
   onGoalContinue: (habitId: string) => void
-  onEditHabit: (habit: Habit) => void
+  onEditHabit: (habit: Habit, fromDrawer?: boolean) => void
 }
 
 const counterUnit = (name: string): string => {
@@ -85,10 +85,19 @@ export function HomeScreen({
   const [pulseHabitId, setPulseHabitId] = useState<string | null>(null)
   const [goalCompleteHabitId, setGoalCompleteHabitId] = useState<string | null>(null)
   const [selectedHeaderDay, setSelectedHeaderDay] = useState<string | null>(null)
+  const [drawerExpandingToEdit, setDrawerExpandingToEdit] = useState(false)
   const togglePendingRef = useRef<Set<string>>(new Set())
   const pulseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const editTransitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const todayKey = today()
   const activeDay = selectedHeaderDay ?? todayKey
+
+  useEffect(() => {
+    return () => {
+      if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current)
+      if (editTransitionTimeoutRef.current) clearTimeout(editTransitionTimeoutRef.current)
+    }
+  }, [])
 
   const goalCompleteHabit = goalCompleteHabitId
     ? habits.find((habit) => habit.id === goalCompleteHabitId) ?? null
@@ -227,6 +236,27 @@ export function HomeScreen({
     }
   }
 
+  const handleDrawerClose = () => {
+    if (editTransitionTimeoutRef.current) {
+      clearTimeout(editTransitionTimeoutRef.current)
+      editTransitionTimeoutRef.current = null
+    }
+    setDrawerExpandingToEdit(false)
+    setDrawerHabit(null)
+  }
+
+  const handleDrawerEdit = () => {
+    if (!drawerHabit || drawerExpandingToEdit) return
+    const habitToEdit = drawerHabit
+    setDrawerExpandingToEdit(true)
+    editTransitionTimeoutRef.current = setTimeout(() => {
+      onEditHabit(habitToEdit, true)
+      setDrawerHabit(null)
+      setDrawerExpandingToEdit(false)
+      editTransitionTimeoutRef.current = null
+    }, 240)
+  }
+
   if (!isHydrated) {
     return (
       <div className={styles.screen}>
@@ -325,14 +355,22 @@ export function HomeScreen({
                 onTap={() => {
                   void handleTap(habit)
                 }}
-                onLongPress={() => setDrawerHabit(habit)}
+                onLongPress={() => {
+                  setDrawerExpandingToEdit(false)
+                  setDrawerHabit(habit)
+                }}
               />
             </motion.div>
           ))}
         </AnimatePresence>
       </div>
 
-      <Drawer open={!!drawerHabit} onClose={() => setDrawerHabit(null)}>
+      <Drawer
+        open={!!drawerHabit}
+        onClose={handleDrawerClose}
+        fullScreen={drawerExpandingToEdit}
+        hideHandle={drawerExpandingToEdit}
+      >
         {drawerHabit && (
           <div className={styles.drawerBody}>
             <div className={styles.drawerHead}>
@@ -349,14 +387,10 @@ export function HomeScreen({
                 type="button"
                 className={styles.drawerIconAction}
                 aria-label="Изменить привычку"
-                onClick={() => {
-                  const habitToEdit = drawerHabit
-                  setDrawerHabit(null)
-                  onEditHabit(habitToEdit)
-                }}
+                disabled={drawerExpandingToEdit}
+                onClick={handleDrawerEdit}
               >
                 <Icon name="edit" size={20} />
-                <span>Изменить</span>
               </button>
             </div>
 

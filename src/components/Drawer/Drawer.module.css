@@ -25,6 +25,13 @@
   overflow-y: auto;
   pointer-events: auto;
   box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.12);
+  transition: border-radius 0.24s ease, max-height 0.24s ease, padding 0.24s ease;
+}
+
+.sheetFull {
+  border-radius: 0;
+  max-height: 100dvh;
+  height: 100dvh;
 }
 
 .handle {

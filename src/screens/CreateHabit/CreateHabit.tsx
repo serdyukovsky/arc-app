@@ -31,6 +31,7 @@ interface CreateHabitProps {
   onUpdate?: (habitId: string, data: CreateHabitData) => Promise<any>
   editingHabit?: Habit | null
   fullScreen?: boolean
+  disableEnterAnimation?: boolean
   showToast: (msg: string) => void
 }
 
@@ -57,6 +58,7 @@ export function CreateHabit({
   onUpdate,
   editingHabit = null,
   fullScreen = false,
+  disableEnterAnimation = false,
   showToast,
 }: CreateHabitProps) {
   const [step, setStep] = useState(1)
@@ -172,13 +174,15 @@ export function CreateHabit({
       {open && (
         <motion.div
           className={`${styles.overlay} ${fullScreen ? styles.overlayFull : ''}`}
-          initial={{ opacity: 0, y: 14 }}
+          initial={disableEnterAnimation ? false : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 12 }}
-          transition={{
-            opacity: { duration: 0.14, ease: 'linear' },
-            y: { duration: 0.18, ease: [0.2, 0.8, 0.2, 1] },
-          }}
+          transition={disableEnterAnimation
+            ? { duration: 0 }
+            : {
+                opacity: { duration: 0.14, ease: 'linear' },
+                y: { duration: 0.18, ease: [0.2, 0.8, 0.2, 1] },
+              }}
         >
           <div className={styles.header}>
             <button className={styles.backBtn} onClick={handleBack} disabled={isSubmitting}>
