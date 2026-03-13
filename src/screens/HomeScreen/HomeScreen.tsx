@@ -1,13 +1,15 @@
 import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { Habit } from '@/types'
+import type { Habit, HabitLog } from '@/types'
 import { CATEGORIES } from '@/types'
+import { parseKey, today } from '@/lib/date'
 import { triggerHaptic } from '@/lib/haptics'
+import { getMilestoneProgress } from '@/lib/milestones'
 import { Header } from '@/components/Header/Header'
 import { HeroCard } from '@/components/HeroCard/HeroCard'
 import { HabitCard } from '@/components/HabitCard/HabitCard'
 import { Drawer } from '@/components/Drawer/Drawer'
-import { ConfirmSheet } from '@/components/ConfirmSheet/ConfirmSheet'
+import { GoalCompleteSheet } from '@/components/GoalCompleteSheet/GoalCompleteSheet'
 import { Icon } from '@/components/Icon/Icon'
 import styles from './HomeScreen.module.css'
 
@@ -15,16 +17,26 @@ interface HomeScreenProps {
   isHydrated: boolean
   habits: Habit[]
   todayCompletedCount: number
-  getTodayValue: (id: string) => number
-  isDoneToday: (habit: Habit) => boolean
+  getTodayValue: (id: string, dateKey?: string) => number
+  isDoneToday: (habit: Habit, dateKey?: string) => boolean
   getDoneDates: (id: string) => Set<string>
-  getStreak: (habit: Habit) => number
+  getStreak: (habit: Habit, dateKey?: string) => number
   getBestStreak: (habit: Habit) => number
-  getWeekDoneCount: (id: string) => number
+  getWeekDoneCount: (id: string, dateKey?: string) => number
+  getLogsForHabit: (id: string) => HabitLog[]
   logHabit: (id: string, value?: number) => Promise<any>
   undoLog: (id: string) => Promise<boolean>
-  deleteHabit: (id: string) => Promise<void>
   showToast: (message: string, onUndo?: () => void) => void
+  updateMilestoneState: (
+    habitId: string,
+    prev?: Pick<Habit, 'streak' | 'goalCompleted' | 'currentMilestoneIndex'>
+  ) => {
+    justHitMilestone: boolean
+    milestoneValue: number | null
+    justCompletedGoal: boolean
+  } | null
+  onGoalComplete: (habitId: string) => void
+  onGoalContinue: (habitId: string) => void
 }
 
 const counterUnit = (name: string): string => {
@@ -35,8 +47,13 @@ const counterUnit = (name: string): string => {
   return 'единиц'
 }
 
-const formatStarted = (isoDate: string): string =>
-  new Date(isoDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+const pluralRu = (value: number, one: string, few: string, many: string): string => {
+  const mod10 = value % 10
+  const mod100 = value % 100
+  if (mod10 === 1 && mod100 !== 11) return one
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few
+  return many
+}
 
 export function HomeScreen({
   isHydrated,
@@ -48,16 +65,105 @@ export function HomeScreen({
   getStreak,
   getBestStreak,
   getWeekDoneCount,
+  getLogsForHabit,
   logHabit,
   undoLog,
-  deleteHabit,
   showToast,
+  updateMilestoneState,
+  onGoalComplete,
+  onGoalContinue,
 }: HomeScreenProps) {
   const [drawerHabit, setDrawerHabit] = useState<Habit | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState<Habit | null>(null)
+  const [pulseHabitId, setPulseHabitId] = useState<string | null>(null)
+  const [goalCompleteHabitId, setGoalCompleteHabitId] = useState<string | null>(null)
+  const [selectedHeaderDay, setSelectedHeaderDay] = useState<string | null>(null)
   const togglePendingRef = useRef<Set<string>>(new Set())
+  const pulseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const todayKey = today()
+  const activeDay = selectedHeaderDay ?? todayKey
+
+  const goalCompleteHabit = goalCompleteHabitId
+    ? habits.find((habit) => habit.id === goalCompleteHabitId) ?? null
+    : null
+
+  const formatMilestoneToast = (value: number, habit: Habit): string => {
+    const unit = habit.type === 'periodic' ? 'нед' : 'д'
+    return `Новый milestone: ${value}${unit}`
+  }
+
+  const triggerPulse = (habitId: string) => {
+    if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current)
+    setPulseHabitId(habitId)
+    pulseTimeoutRef.current = setTimeout(() => {
+      setPulseHabitId(null)
+    }, 520)
+  }
+
+  const scheduleMilestoneUpdate = (habit: Habit) => {
+    window.requestAnimationFrame(() => {
+      const result = updateMilestoneState(habit.id, habit)
+      if (!result) return
+      if (result.justHitMilestone && result.milestoneValue !== null) {
+        showToast(formatMilestoneToast(result.milestoneValue, habit))
+        triggerPulse(habit.id)
+      }
+      if (result.justCompletedGoal) {
+        setGoalCompleteHabitId(habit.id)
+      }
+    })
+  }
+
+  const handleHeaderDayPress = (day: string) => {
+    const selected = parseKey(day)
+    selected.setHours(0, 0, 0, 0)
+
+    const currentDate = new Date()
+    currentDate.setHours(0, 0, 0, 0)
+
+    const dayLabel = selected.toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'short',
+    })
+
+    if (selected.getTime() > currentDate.getTime()) {
+      showToast(`${dayLabel}: день ещё не наступил`)
+      return
+    }
+
+    setSelectedHeaderDay(day)
+    const completedCount = habits.reduce((count, habit) => {
+      return count + (isDoneToday(habit, day) ? 1 : 0)
+    }, 0)
+    showToast(`${dayLabel}: ${completedCount}/${habits.length} привычек`)
+  }
+
+  const handleDayPress = (habit: Habit, day: string) => {
+    const selected = parseKey(day)
+    selected.setHours(0, 0, 0, 0)
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const dayLabel = selected.toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'short',
+    })
+
+    if (selected.getTime() > today.getTime()) {
+      showToast(`${dayLabel}: день ещё не наступил`)
+      return
+    }
+
+    const done = isDoneToday(habit, day)
+    showToast(`${dayLabel}: ${done ? 'выполнено ✓' : 'пропуск'}`)
+  }
 
   const handleTap = async (habit: Habit) => {
+    if (activeDay !== todayKey) {
+      showToast('Это прошлый день. Вернись на сегодня, чтобы отмечать')
+      return
+    }
+
     if (habit.type === 'counter') {
       const current = getTodayValue(habit.id)
       if (current >= habit.goal) return
@@ -68,6 +174,8 @@ export function HomeScreen({
         showToast('Не удалось сохранить отметку')
         return
       }
+
+      scheduleMilestoneUpdate(habit)
 
       if (next >= habit.goal) {
         triggerHaptic('success')
@@ -88,6 +196,7 @@ export function HomeScreen({
           showToast('Не удалось сохранить отметку')
           return
         }
+        scheduleMilestoneUpdate(habit)
         showToast('Отметка снята', () => {
           void logHabit(habit.id)
         })
@@ -100,6 +209,7 @@ export function HomeScreen({
         return
       }
 
+      scheduleMilestoneUpdate(habit)
       triggerHaptic('success')
       showToast(`${habit.name} отмечена ✓`, () => {
         void undoLog(habit.id)
@@ -127,10 +237,58 @@ export function HomeScreen({
     )
   }
 
+  const completedForActiveDay = habits.filter((habit) => isDoneToday(habit, activeDay)).length
+  const drawerStreak = drawerHabit ? getStreak(drawerHabit, activeDay) : 0
+  const drawerBestStreak = drawerHabit ? getBestStreak(drawerHabit) : 0
+  const drawerGoalDays = drawerHabit?.goalDays ?? null
+  const drawerGoalCompleted = drawerHabit ? drawerGoalDays !== null && drawerStreak >= drawerGoalDays : false
+  const drawerMilestone = drawerHabit
+    ? getMilestoneProgress({ ...drawerHabit, streak: drawerStreak })
+    : null
+  const drawerMilestoneRemaining = drawerMilestone
+    ? Math.max(0, drawerMilestone.nextMilestone - drawerStreak)
+    : 0
+  const drawerMilestoneUnits = drawerHabit?.type === 'periodic'
+    ? { one: 'неделя', few: 'недели', many: 'недель' }
+    : { one: 'день', few: 'дня', many: 'дней' }
+  const showMilestoneRow = !!drawerHabit && !(drawerGoalDays === null && drawerStreak === 0)
+
+  const refDate = parseKey(activeDay)
+  refDate.setHours(0, 0, 0, 0)
+  const createdDate = drawerHabit ? new Date(drawerHabit.created) : new Date()
+  createdDate.setHours(0, 0, 0, 0)
+  const daysSinceCreation = Math.max(
+    1,
+    drawerHabit ? Math.floor((refDate.getTime() - createdDate.getTime()) / 86400000) + 1 : 1
+  )
+  const weeksSinceCreation = Math.max(1, Math.ceil(daysSinceCreation / 7))
+  const startedLabel = drawerHabit
+    ? createdDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+    : ''
+
+  const lifetimeDays = drawerHabit?.lifetimeDays ?? 0
+  const completionBase = drawerHabit?.type === 'periodic' ? weeksSinceCreation : daysSinceCreation
+  const completionPercent = Math.min(100, Math.round((lifetimeDays / completionBase) * 100))
+
+  const drawerLogs = drawerHabit ? getLogsForHabit(drawerHabit.id) : []
+  const counterTotal = drawerLogs.reduce((sum, log) => sum + log.value, 0)
+  const counterBestDay = drawerLogs.reduce((max, log) => Math.max(max, log.value), 0)
+
+  const goalInfo = (() => {
+    if (!drawerHabit || drawerGoalDays === null) return null
+    if (drawerHabit.type === 'daily') {
+      return `Цель — ${drawerGoalDays} ${pluralRu(drawerGoalDays, 'день', 'дня', 'дней')}`
+    }
+    if (drawerHabit.type === 'counter') {
+      return `Цель — ${drawerHabit.goal} в день`
+    }
+    return `Цель — ${drawerHabit.goal} ${pluralRu(drawerHabit.goal, 'раз', 'раза', 'раз')} в неделю`
+  })()
+
   return (
     <div className={styles.screen}>
-      <Header />
-      <HeroCard completed={todayCompletedCount} total={habits.length} />
+      <Header selectedDay={selectedHeaderDay} onDayPress={handleHeaderDayPress} />
+      <HeroCard completed={activeDay === todayKey ? todayCompletedCount : completedForActiveDay} total={habits.length} />
 
       <div className={styles.list}>
         <AnimatePresence initial={false}>
@@ -146,11 +304,13 @@ export function HomeScreen({
             >
               <HabitCard
                 habit={habit}
-                todayValue={getTodayValue(habit.id)}
-                isDoneToday={isDoneToday(habit)}
+                todayValue={getTodayValue(habit.id, activeDay)}
+                isDoneToday={isDoneToday(habit, activeDay)}
                 doneDates={getDoneDates(habit.id)}
-                streak={getStreak(habit)}
-                weekDoneCount={getWeekDoneCount(habit.id)}
+                streak={getStreak(habit, activeDay)}
+                weekDoneCount={getWeekDoneCount(habit.id, activeDay)}
+                pulse={pulseHabitId === habit.id}
+                onDayPress={(day) => handleDayPress(habit, day)}
                 onTap={() => {
                   void handleTap(habit)
                 }}
@@ -163,75 +323,121 @@ export function HomeScreen({
 
       <Drawer open={!!drawerHabit} onClose={() => setDrawerHabit(null)}>
         {drawerHabit && (
-          <div>
+          <div className={styles.drawerBody}>
             <div className={styles.drawerHead}>
-              <div className={styles.drawerIconBox}>
-                <Icon
-                  name={CATEGORIES.find((c) => c.id === drawerHabit.category)?.icon ?? 'add_circle'}
-                  size={28}
-                />
+              <div className={styles.drawerHeadMain}>
+                <div className={styles.drawerIconBox}>
+                  <Icon
+                    name={CATEGORIES.find((c) => c.id === drawerHabit.category)?.icon ?? 'add_circle'}
+                    size={28}
+                  />
+                </div>
+                <div className={styles.drawerTitle}>{drawerHabit.name}</div>
               </div>
-              <div className={styles.drawerTitle}>{drawerHabit.name}</div>
+              <button
+                type="button"
+                className={styles.drawerIconAction}
+                aria-label="Изменить привычку"
+                onClick={() => setDrawerHabit(null)}
+              >
+                <Icon name="edit" size={20} />
+              </button>
             </div>
 
-            <div className={styles.drawerGrid}>
-              <div className={styles.drawerStat}>
-                <div className={styles.drawerStatLabel}>СТРИК</div>
-                <div className={styles.drawerStatValue}>{getStreak(drawerHabit)} {drawerHabit.type === 'periodic' ? 'нед' : 'дн'}</div>
+            <div className={styles.drawerPairRow}>
+              <div className={styles.drawerMetricBlock}>
+                <div className={styles.drawerMetricValue}>{drawerStreak}</div>
+                <div className={styles.drawerMetricLabel}>
+                  {drawerHabit.type === 'periodic' ? 'недель стрика' : 'дней стрика'}
+                </div>
               </div>
-              <div className={styles.drawerStat}>
-                <div className={styles.drawerStatLabel}>РЕКОРД</div>
-                <div className={styles.drawerStatValue}>{getBestStreak(drawerHabit)} {drawerHabit.type === 'periodic' ? 'нед' : 'дн'}</div>
+              <div className={styles.drawerMetricBlock}>
+                <div className={styles.drawerMetricValue}>{drawerBestStreak}</div>
+                <div className={styles.drawerMetricLabel}>лучший рекорд</div>
               </div>
-              <div className={styles.drawerStat}>
-                <div className={styles.drawerStatLabel}>С</div>
-                <div className={styles.drawerStatValue}>{formatStarted(drawerHabit.created)}</div>
+            </div>
+
+            {showMilestoneRow && (
+              <>
+                <div className={styles.drawerDivider} />
+                <div className={styles.drawerFullRow}>
+                  {drawerGoalCompleted
+                    ? '🏆 цель достигнута'
+                    : `ещё ${drawerMilestoneRemaining} ${pluralRu(
+                        drawerMilestoneRemaining,
+                        drawerMilestoneUnits.one,
+                        drawerMilestoneUnits.few,
+                        drawerMilestoneUnits.many
+                      )} → milestone ${drawerMilestone?.nextMilestone ?? 0}`}
+                </div>
+              </>
+            )}
+
+            <div className={styles.drawerDivider} />
+            <div className={styles.drawerPairRow}>
+              <div className={styles.drawerMetricBlock}>
+                <div className={styles.drawerMetricValue}>
+                  {drawerHabit.type === 'counter' ? counterTotal : lifetimeDays}
+                </div>
+                <div className={styles.drawerMetricLabel}>
+                  {drawerHabit.type === 'counter' ? 'всего единиц' : 'раз всего'}
+                </div>
               </div>
-              <div className={styles.drawerStat}>
-                <div className={styles.drawerStatLabel}>ИНФО</div>
-                <div className={styles.drawerStatValue}>
-                  {drawerHabit.type === 'counter' && `Цель ${drawerHabit.goal}/день`}
-                  {drawerHabit.type === 'periodic' && `${getWeekDoneCount(drawerHabit.id)}/${drawerHabit.goal} неделя`}
-                  {drawerHabit.type === 'daily' && `${Math.min(getStreak(drawerHabit), 28)}/28`}
+              <div className={styles.drawerMetricBlock}>
+                <div className={styles.drawerMetricValue}>{completionPercent}%</div>
+                <div className={styles.drawerMetricLabel}>
+                  {drawerHabit.type === 'periodic' ? 'недель выполнено' : 'дней выполнено'}
                 </div>
               </div>
             </div>
 
-            <div className={styles.drawerActions}>
-              <button
-                className={styles.drawerGhostBtn}
-                onClick={() => {
-                  setDrawerHabit(null)
-                }}
-              >
-                Изменить
-              </button>
-              <button className={styles.drawerPrimaryBtn} onClick={() => setDrawerHabit(null)}>
-                Готово
-              </button>
+            <div className={styles.drawerDivider} />
+            <div className={styles.drawerFullRow}>
+              {drawerHabit.type === 'periodic'
+                ? `${weeksSinceCreation} ${pluralRu(weeksSinceCreation, 'неделя', 'недели', 'недель')} — с ${startedLabel}`
+                : `${daysSinceCreation} ${pluralRu(daysSinceCreation, 'день', 'дня', 'дней')} — с ${startedLabel}`}
             </div>
 
+            {goalInfo && (
+              <>
+                <div className={styles.drawerDivider} />
+                <div className={styles.drawerFullRow}>{goalInfo}</div>
+              </>
+            )}
+
+            {drawerHabit.type === 'counter' && (
+              <>
+                <div className={styles.drawerDivider} />
+                <div className={styles.drawerFullRow}>рекорд за день: {counterBestDay}</div>
+              </>
+            )}
+
             <button
-              className={styles.drawerDeleteBtn}
+              type="button"
+              className={styles.drawerGhostBtn}
               onClick={() => {
                 setDrawerHabit(null)
-                setConfirmDelete(drawerHabit)
               }}
             >
-              Удалить привычку
+              Изменить
             </button>
           </div>
         )}
       </Drawer>
 
-      <ConfirmSheet
-        open={!!confirmDelete}
-        habitName={confirmDelete?.name}
-        onClose={() => setConfirmDelete(null)}
-        onConfirm={() => {
-          if (confirmDelete) {
-            void deleteHabit(confirmDelete.id)
-            showToast('Привычка удалена')
+      <GoalCompleteSheet
+        open={!!goalCompleteHabit}
+        habitName={goalCompleteHabit?.name}
+        onComplete={() => {
+          if (goalCompleteHabit) {
+            onGoalComplete(goalCompleteHabit.id)
+            setGoalCompleteHabitId(null)
+          }
+        }}
+        onContinue={() => {
+          if (goalCompleteHabit) {
+            onGoalContinue(goalCompleteHabit.id)
+            setGoalCompleteHabitId(null)
           }
         }}
       />

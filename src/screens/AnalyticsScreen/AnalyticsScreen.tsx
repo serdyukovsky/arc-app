@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, LayoutGroup, animate, motion, useReducedMotion } from 'framer-motion'
+import { AnimatePresence, animate, motion, useReducedMotion } from 'framer-motion'
 import type { Habit, HabitLog } from '@/types'
 import { parseKey, toKey } from '@/lib/date'
 import styles from './AnalyticsScreen.module.css'
@@ -123,6 +123,7 @@ function AnimatedNumber({ value, prefix = '', suffix = '' }: AnimatedNumberProps
 export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClose }: AnalyticsScreenProps) {
   const [period, setPeriod] = useState<Period>('week')
   const [offset, setOffset] = useState(0)
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
   const reduceMotion = useReducedMotion()
   const areaGradientId = useId().replace(/:/g, '')
   const viewKey = `${period}:${offset}`
@@ -393,6 +394,55 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
     return cells
   }, [range])
 
+  useEffect(() => {
+    if (range.days.length === 0) {
+      setSelectedDay(null)
+      return
+    }
+
+    setSelectedDay((prev) => {
+      if (prev && range.days.includes(prev)) return prev
+      return range.days.includes(todayKey) ? todayKey : range.days[range.days.length - 1]
+    })
+  }, [range.days, todayKey])
+
+  const selectedDayDetails = useMemo(() => {
+    if (!selectedDay) return null
+
+    const completion = getDayCompletion(selectedDay)
+    const isFuture = completion === null
+    const dateLabel = parseKey(selectedDay).toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+
+    const habitRows = habits.map((habit) => {
+      const value = logMap.get(`${habit.id}:${selectedDay}`) ?? 0
+      const done = habit.type === 'counter' ? value >= habit.goal : value > 0
+      const detailText =
+        habit.type === 'counter'
+          ? `${Math.min(value, habit.goal)}/${habit.goal}`
+          : done
+            ? 'выполнено'
+            : 'пропуск'
+
+      return {
+        id: habit.id,
+        name: habit.name,
+        done,
+        detailText,
+      }
+    })
+
+    return {
+      dateLabel,
+      isFuture,
+      completion,
+      habitRows,
+    }
+  }, [selectedDay, habits, logMap])
+
   return (
     <div className={styles.screen}>
       <div className={styles.topBar}>
@@ -400,42 +450,35 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
           <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>arrow_back</span>
         </button>
 
-        <LayoutGroup id="analytics-period-toggle">
-          <div className={styles.toggle}>
-            <button
-              className={`${styles.toggleBtn} ${period === 'week' ? styles.activeToggle : ''}`}
-              onClick={() => {
-                setPeriod('week')
-                setOffset(0)
-              }}
-            >
-              {period === 'week' && (
-                <motion.span
-                  layoutId="analytics-toggle-pill"
-                  className={styles.togglePill}
-                  transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.8 }}
-                />
-              )}
-              <span className={styles.toggleLabel}>Неделя</span>
-            </button>
-            <button
-              className={`${styles.toggleBtn} ${period === 'month' ? styles.activeToggle : ''}`}
-              onClick={() => {
-                setPeriod('month')
-                setOffset(0)
-              }}
-            >
-              {period === 'month' && (
-                <motion.span
-                  layoutId="analytics-toggle-pill"
-                  className={styles.togglePill}
-                  transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.8 }}
-                />
-              )}
-              <span className={styles.toggleLabel}>Месяц</span>
-            </button>
-          </div>
-        </LayoutGroup>
+        <div className={styles.toggle}>
+          <motion.span
+            className={styles.togglePill}
+            animate={{ x: period === 'month' ? '100%' : '0%' }}
+            transition={
+              reduceMotion
+                ? { duration: 0 }
+                : { type: 'spring', stiffness: 420, damping: 34, mass: 0.8 }
+            }
+          />
+          <button
+            className={`${styles.toggleBtn} ${period === 'week' ? styles.activeToggle : ''}`}
+            onClick={() => {
+              setPeriod('week')
+              setOffset(0)
+            }}
+          >
+            <span className={styles.toggleLabel}>Неделя</span>
+          </button>
+          <button
+            className={`${styles.toggleBtn} ${period === 'month' ? styles.activeToggle : ''}`}
+            onClick={() => {
+              setPeriod('month')
+              setOffset(0)
+            }}
+          >
+            <span className={styles.toggleLabel}>Месяц</span>
+          </button>
+        </div>
       </div>
 
       <div className={styles.body}>
@@ -756,16 +799,24 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
               transition={{ duration: reduceMotion ? 0 : 0.2, ease: ANALYTICS_EASE }}
             >
               {weekCells.map((cell) => (
-                <div key={cell.day} className={styles.weekCol}>
+                <button
+                  key={cell.day}
+                  type="button"
+                  className={styles.weekCol}
+                  onClick={() => setSelectedDay(cell.day)}
+                  aria-label={`Открыть день ${cell.day}`}
+                >
                   <div
-                    className={`${styles.weekCell} ${cell.isToday ? styles.todayCell : ''}`}
+                    className={`${styles.weekCell} ${cell.isToday ? styles.todayCell : ''} ${selectedDay === cell.day ? styles.selectedCell : ''}`}
                     style={{
                       background: cell.color,
                       opacity: cell.isFuture ? 0.4 : 1,
                     }}
                   />
-                  <span className={`${styles.weekLabel} ${cell.isToday ? styles.weekLabelToday : ''}`}>{cell.label}</span>
-                </div>
+                  <span className={`${styles.weekLabel} ${cell.isToday ? styles.weekLabelToday : ''} ${selectedDay === cell.day ? styles.weekLabelSelected : ''}`}>
+                    {cell.label}
+                  </span>
+                </button>
               ))}
             </motion.div>
           ) : (
@@ -802,9 +853,12 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
                   }
 
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={cell.key}
-                      className={`${styles.monthCell} ${isToday ? styles.todayCell : ''}`}
+                      className={`${styles.monthCell} ${isToday ? styles.todayCell : ''} ${selectedDay === cell.date ? styles.selectedCell : ''}`}
+                      onClick={() => setSelectedDay(cell.date!)}
+                      aria-label={`Открыть день ${cell.day}`}
                       style={{
                         background: color,
                         opacity: isFuture ? 0.35 : 1,
@@ -816,11 +870,35 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
                       >
                         {cell.day}
                       </span>
-                    </div>
+                    </button>
                   )
                 })}
               </div>
             </motion.div>
+          )}
+
+          {selectedDayDetails && (
+            <div className={styles.dayDetails}>
+              <div className={styles.dayDetailsHead}>
+                <span className={styles.dayDetailsTitle}>{selectedDayDetails.dateLabel}</span>
+                <span className={styles.dayDetailsPct}>
+                  {selectedDayDetails.isFuture
+                    ? 'день ещё не завершён'
+                    : `${Math.round((selectedDayDetails.completion ?? 0) * 100)}%`}
+                </span>
+              </div>
+
+              <div className={styles.dayDetailsList}>
+                {selectedDayDetails.habitRows.map((row) => (
+                  <div key={row.id} className={styles.dayDetailsRow}>
+                    <span className={styles.dayDetailsName}>{row.name}</span>
+                    <span className={`${styles.dayDetailsState} ${row.done ? styles.dayDetailsDone : styles.dayDetailsMiss}`}>
+                      {row.detailText}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </motion.section>
       </div>

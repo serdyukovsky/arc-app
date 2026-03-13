@@ -17,7 +17,14 @@ export interface Habit {
   category: Category
   type: HabitType
   goal: number
-  daysGoal: number | null
+  goalDays: number | null
+  daysGoal?: number | null
+  streak: number
+  bestStreak: number
+  lifetimeDays: number
+  goalCompleted: boolean
+  currentMilestoneIndex: number
+  milestones: number[] | null
   reminder: 'none' | 'morning' | 'day' | 'evening'
   created: string
   isArchived: boolean

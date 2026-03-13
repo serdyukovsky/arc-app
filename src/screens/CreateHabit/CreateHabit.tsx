@@ -7,10 +7,25 @@ import Step2 from './Step2'
 import Step3 from './Step3'
 import styles from './CreateHabit.module.css'
 
+type CreateHabitData = Omit<
+  Habit,
+  | 'id'
+  | 'created'
+  | 'isArchived'
+  | 'order'
+  | 'user'
+  | 'streak'
+  | 'bestStreak'
+  | 'lifetimeDays'
+  | 'goalCompleted'
+  | 'currentMilestoneIndex'
+  | 'milestones'
+>
+
 interface CreateHabitProps {
   open: boolean
   onClose: () => void
-  onCreate: (data: Omit<Habit, 'id' | 'created' | 'isArchived' | 'order' | 'user'>) => Promise<any>
+  onCreate: (data: CreateHabitData) => Promise<any>
   showToast: (msg: string) => void
 }
 
@@ -22,7 +37,7 @@ const getDefaultGoal = (type: HabitType): number => {
   return 1
 }
 
-const getDefaultDaysGoal = (type: HabitType): number => (type === 'periodic' ? 8 : 21)
+const getDefaultGoalDays = (type: HabitType): number => (type === 'periodic' ? 8 : 21)
 
 const stepTransition = {
   initial: { opacity: 0 },
@@ -36,7 +51,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
   const [category, setCategory] = useState<Category | null>(null)
   const [type, setType] = useState<HabitType>('daily')
   const [goal, setGoal] = useState(1)
-  const [daysGoal, setDaysGoal] = useState<number | null>(21)
+  const [goalDays, setGoalDays] = useState<number | null>(21)
   const [reminder, setReminder] = useState<Reminder>('none')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const submitLockRef = useRef(false)
@@ -47,7 +62,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
     setCategory(null)
     setType('daily')
     setGoal(1)
-    setDaysGoal(21)
+    setGoalDays(21)
     setReminder('none')
     setIsSubmitting(false)
     submitLockRef.current = false
@@ -66,7 +81,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
   const handleTypeChange = (nextType: HabitType) => {
     setType(nextType)
     setGoal(getDefaultGoal(nextType))
-    setDaysGoal(getDefaultDaysGoal(nextType))
+    setGoalDays(getDefaultGoalDays(nextType))
   }
 
   const handleNext = async () => {
@@ -87,7 +102,7 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
       category,
       type,
       goal: type === 'daily' ? 1 : goal,
-      daysGoal,
+      goalDays,
       reminder,
     })
 
@@ -167,8 +182,8 @@ export function CreateHabit({ open, onClose, onCreate, showToast }: CreateHabitP
                     onTypeChange={handleTypeChange}
                     goal={goal}
                     onGoalChange={setGoal}
-                    daysGoal={daysGoal}
-                    onDaysGoalChange={setDaysGoal}
+                    goalDays={goalDays}
+                    onGoalDaysChange={setGoalDays}
                   />
                 )}
                 {step === 3 && <Step3 reminder={reminder} onReminderChange={setReminder} />}

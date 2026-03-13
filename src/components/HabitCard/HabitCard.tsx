@@ -13,7 +13,9 @@ interface HabitCardProps {
   streak: number
   weekDoneCount: number
   onTap: () => void
+  onDayPress?: (day: string) => void
   onLongPress: () => void
+  pulse?: boolean
 }
 
 export function HabitCard({
@@ -24,7 +26,9 @@ export function HabitCard({
   streak,
   weekDoneCount,
   onTap,
+  onDayPress,
   onLongPress,
+  pulse = false,
 }: HabitCardProps) {
   const bindLongPress = useLongPress(onLongPress, () => {
     triggerHaptic('light')
@@ -50,6 +54,7 @@ export function HabitCard({
           weekDoneCount={weekDoneCount}
           doneDates={doneDates}
           streak={streak}
+          onDayPress={onDayPress}
         />
       )
     case 'daily':
@@ -60,6 +65,8 @@ export function HabitCard({
           isDone={isDoneToday}
           doneDates={doneDates}
           streak={streak}
+          onDayPress={onDayPress}
+          pulse={pulse}
         />
       )
   }

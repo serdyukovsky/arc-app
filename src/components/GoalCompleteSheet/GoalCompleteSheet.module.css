@@ -1,0 +1,37 @@
+.content {
+  padding: 0.5rem 0 0.25rem;
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: 0.45rem;
+}
+
+.message {
+  font-size: 0.88rem;
+  opacity: 0.45;
+  margin-bottom: 1.2rem;
+  line-height: 1.35;
+}
+
+.primary,
+.secondary {
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  padding: 16px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.primary {
+  background: #000;
+  color: #fff;
+}
+
+.secondary {
+  background: #f4f4f4;
+  color: #000;
+  margin-top: 0.625rem;
+}

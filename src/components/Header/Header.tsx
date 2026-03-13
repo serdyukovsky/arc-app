@@ -2,8 +2,14 @@ import { formatDate, getGreeting, getWeekDays, isToday, DAY_NAMES_SHORT, parseKe
 import { Logo } from '@/components/Logo/Logo'
 import styles from './Header.module.css'
 
-export function Header() {
+interface HeaderProps {
+  selectedDay?: string | null
+  onDayPress?: (day: string) => void
+}
+
+export function Header({ selectedDay = null, onDayPress }: HeaderProps = {}) {
   const todayKey = today()
+  const activeDay = selectedDay ?? todayKey
   const weekDays = getWeekDays()
   const todayDate = parseKey(todayKey)
   const todayTime = todayDate.getTime()
@@ -11,28 +17,37 @@ export function Header() {
   return (
     <div className={styles.header}>
       <div className={styles.topRow}>
-        <div className={styles.date}>{formatDate(todayKey)}</div>
+        <div className={styles.date}>{formatDate(activeDay)}</div>
         <Logo size={22} opacity={0.45} />
       </div>
       <div className={styles.greeting}>{getGreeting()}</div>
       <div className={styles.week}>
         {weekDays.map((day, i) => {
           const isCurrentDay = isToday(day)
+          const isSelectedDay = day === activeDay
           const dayDate = parseKey(day)
           const isFuture = dayDate.getTime() > todayTime
           return (
-            <div key={day} className={styles.weekDay}>
-              <span className={`${styles.weekLabel} ${isCurrentDay ? styles.weekLabelToday : ''}`}>
+            <button
+              key={day}
+              type="button"
+              className={`${styles.weekDay} ${styles.weekDayButton}`}
+              onClick={() => onDayPress?.(day)}
+              disabled={!onDayPress}
+              aria-label={`Открыть день ${day}`}
+            >
+              <span
+                className={`${styles.weekLabel} ${isCurrentDay ? styles.weekLabelToday : ''} ${isSelectedDay ? styles.weekLabelSelected : ''}`}
+              >
                 {DAY_NAMES_SHORT[i]}
               </span>
-              {isCurrentDay ? (
-                <div className={styles.todayBadge}>{dayDate.getDate()}</div>
-              ) : (
-                <span className={`${styles.weekDate} ${isFuture ? styles.weekDateFuture : ''}`}>
-                  {dayDate.getDate()}
-                </span>
-              )}
-            </div>
+              <span
+                className={`${styles.weekDate} ${isFuture ? styles.weekDateFuture : ''} ${isSelectedDay ? styles.weekDateSelected : ''}`}
+              >
+                {dayDate.getDate()}
+              </span>
+              <span className={`${styles.todayDot} ${isCurrentDay ? styles.todayDotVisible : ''}`} />
+            </button>
           )
         })}
       </div>

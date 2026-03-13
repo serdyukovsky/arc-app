@@ -1,15 +1,17 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import type { HabitLog } from '@/types'
 import { pbRequest } from '@/lib/pb'
-import { today, daysAgo, toKey } from '@/lib/date'
+import { today, daysAgo, toKey, parseKey } from '@/lib/date'
 import {
   calcDailyStreak,
+  calcDailyStreakAtDate,
   calcBestStreak,
   calcPeriodicStreak,
+  calcPeriodicStreakAtDate,
   calcPeriodicBestStreak,
 } from '@/lib/streak'
 
-const DEV_LOGS_KEY = 'coil.dev.logs.v3'
+const DEV_LOGS_KEY = 'coil.dev.logs.v5'
 
 const canUseStorage = () => typeof window !== 'undefined'
 
@@ -44,6 +46,8 @@ const buildDevLogs = (habitIds: string[]): HabitLog[] => {
   push('dev-workout', 0, 1)
 
   for (let i = 0; i < 12; i++) push('dev-read', -i, 1)
+
+  for (let i = 0; i < 13; i++) push('dev-journal', -i, 1)
 
   push('dev-meditation', 0, 1)
   push('dev-meditation', -1, 1)
@@ -329,23 +333,32 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
   )
 
   const getTodayValue = useCallback(
-    (habitId: string): number => {
-      const dateKey = today()
-      const log = logs.find((l) => l.habit === habitId && l.date === dateKey)
+    (habitId: string, dateKey?: string): number => {
+      const targetDate = dateKey ?? today()
+      const log = logs.find((l) => l.habit === habitId && l.date === targetDate)
       return log?.value ?? 0
     },
     [logs]
   )
 
   const isDoneToday = useCallback(
-    (habitId: string, goal: number = 1): boolean => getTodayValue(habitId) >= goal,
+    (habitId: string, goal: number = 1, dateKey?: string): boolean => getTodayValue(habitId, dateKey) >= goal,
     [getTodayValue]
   )
 
   const getStreak = useCallback(
-    (habitId: string, type: 'daily' | 'periodic' | 'counter' = 'daily', goal: number = 1): number => {
+    (
+      habitId: string,
+      type: 'daily' | 'periodic' | 'counter' = 'daily',
+      goal: number = 1,
+      referenceDateKey?: string
+    ): number => {
       const doneDates = getDoneDates(habitId)
-      if (type === 'periodic') return calcPeriodicStreak(doneDates, goal)
+      if (type === 'periodic') {
+        if (referenceDateKey) return calcPeriodicStreakAtDate(doneDates, goal, referenceDateKey)
+        return calcPeriodicStreak(doneDates, goal)
+      }
+      if (referenceDateKey) return calcDailyStreakAtDate(doneDates, referenceDateKey)
       return calcDailyStreak(doneDates)
     },
     [getDoneDates]
@@ -361,14 +374,17 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
   )
 
   const getWeekDoneCount = useCallback(
-    (habitId: string): number => {
-      const now = new Date()
-      const dow = now.getDay()
+    (habitId: string, referenceDateKey?: string): number => {
+      const ref = referenceDateKey ? parseKey(referenceDateKey) : new Date()
+      ref.setHours(0, 0, 0, 0)
+      const dow = ref.getDay()
       const mondayOffset = (dow + 6) % 7
       let count = 0
       for (let i = 0; i < 7; i++) {
-        const d = new Date(now)
-        d.setDate(now.getDate() - mondayOffset + i)
+        const d = new Date(ref)
+        d.setDate(ref.getDate() - mondayOffset + i)
+        d.setHours(0, 0, 0, 0)
+        if (d.getTime() > ref.getTime()) break
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
         if (logs.some((l) => l.habit === habitId && l.date === key && l.value > 0)) count++
       }

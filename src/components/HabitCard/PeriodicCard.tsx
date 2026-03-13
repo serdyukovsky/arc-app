@@ -11,6 +11,7 @@ interface PeriodicCardProps {
   doneDates: Set<string>
   streak: number
   bindLongPress: Record<string, any>
+  onDayPress?: (day: string) => void
 }
 
 export function PeriodicCard({
@@ -20,6 +21,7 @@ export function PeriodicCard({
   doneDates,
   streak,
   bindLongPress,
+  onDayPress,
 }: PeriodicCardProps) {
   const category = CATEGORIES.find((c) => c.id === habit.category)
   const weekDays = getWeekDays()
@@ -52,7 +54,16 @@ export function PeriodicCard({
 
         <div className={styles.weekRow}>
           {weekDays.map((day, i) => (
-            <div key={day} className={styles.dayCol}>
+            <button
+              key={day}
+              type="button"
+              data-interactive="true"
+              className={`${styles.dayCol} ${styles.dayButton}`}
+              onClick={(event) => {
+                event.stopPropagation()
+                onDayPress?.(day)
+              }}
+            >
               <div
                 className={[
                   styles.dayDot,
@@ -69,7 +80,7 @@ export function PeriodicCard({
               >
                 {DAY_NAMES_SHORT[i]}
               </span>
-            </div>
+            </button>
           ))}
         </div>
       </div>
