@@ -10,6 +10,7 @@ interface DrawerProps {
   title?: string
   fullScreen?: boolean
   hideHandle?: boolean
+  disableExitAnimation?: boolean
 }
 
 export function Drawer({
@@ -19,6 +20,7 @@ export function Drawer({
   title,
   fullScreen = false,
   hideHandle = false,
+  disableExitAnimation = false,
 }: DrawerProps) {
   useEffect(() => {
     if (open) {
@@ -41,26 +43,26 @@ export function Drawer({
             className={styles.overlay}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            exit={disableExitAnimation ? { opacity: 1 } : { opacity: 0 }}
+            transition={disableExitAnimation ? { duration: 0 } : { duration: 0.2 }}
             onClick={onClose}
           />
           <motion.div
             className={styles.sheetViewport}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+            exit={disableExitAnimation ? { y: 0 } : { y: '100%' }}
+            transition={
+              disableExitAnimation
+                ? { duration: 0 }
+                : { duration: 0.32, ease: [0.32, 0.72, 0, 1] }
+            }
           >
-            <motion.div
-              layout
-              className={`${styles.sheet} ${fullScreen ? styles.sheetFull : ''}`}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-            >
+            <div className={`${styles.sheet} ${fullScreen ? styles.sheetFull : ''}`}>
               {!hideHandle && <div className={styles.handle} />}
               {title && <div className={styles.title}>{title}</div>}
               {children}
-            </motion.div>
+            </div>
           </motion.div>
         </>
       )}

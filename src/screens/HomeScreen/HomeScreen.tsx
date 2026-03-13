@@ -254,7 +254,7 @@ export function HomeScreen({
       setDrawerHabit(null)
       setDrawerExpandingToEdit(false)
       editTransitionTimeoutRef.current = null
-    }, 240)
+    }, 220)
   }
 
   if (!isHydrated) {
@@ -369,10 +369,10 @@ export function HomeScreen({
         open={!!drawerHabit}
         onClose={handleDrawerClose}
         fullScreen={drawerExpandingToEdit}
-        hideHandle={drawerExpandingToEdit}
+        disableExitAnimation={drawerExpandingToEdit}
       >
         {drawerHabit && (
-          <div className={styles.drawerBody}>
+          <div className={`${styles.drawerBody} ${drawerExpandingToEdit ? styles.drawerBodyToEdit : ''}`}>
             <div className={styles.drawerHead}>
               <div className={styles.drawerHeadMain}>
                 <div className={styles.drawerIconBox}>
