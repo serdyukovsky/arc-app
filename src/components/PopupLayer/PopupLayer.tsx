@@ -43,7 +43,9 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
   }, [event?.order])
 
   useEffect(() => {
-    if (!event || !isBannerType(event.type) || event.type === 'freeze_offer') return
+    if (!event || !isBannerType(event.type)) return
+    if (event.type === 'freeze_offer') return
+    if (event.type === 'streak_lost' && (event.data.freezesAvailable ?? 0) > 0) return
     const timeout = window.setTimeout(() => {
       onClose()
     }, 3500)
@@ -67,7 +69,9 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
   }
 
   const showBanner = (popupEvent: PopupEvent, popupText: { title: string; subtitle: string }) => {
-    const hasButton = popupEvent.type === 'freeze_offer'
+    const hasFreeze = popupEvent.type === 'freeze_offer'
+    const hasRecovery = popupEvent.type === 'streak_lost' && (popupEvent.data.freezesAvailable ?? 0) > 0
+    const hasButton = hasFreeze || hasRecovery
     const topClass = hasButton
       ? `${styles.banner__top} ${styles['banner__top--has-btn']}`
       : styles.banner__top
@@ -112,7 +116,7 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
                 onClose()
               }}
             >
-              Заморозить
+              {hasRecovery ? 'Восстановить' : 'Заморозить'}
             </button>
           )}
         </motion.div>

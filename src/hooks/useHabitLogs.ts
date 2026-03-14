@@ -213,8 +213,8 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
   }, [logs])
 
   const logHabit = useCallback(
-    async (habitId: string, value: number = 1) => {
-      const dateKey = today()
+    async (habitId: string, value: number = 1, forDate?: string) => {
+      const dateKey = forDate ?? today()
       const currentLogs = logsRef.current
 
       if (!token) {

@@ -1,6 +1,6 @@
 import type { Habit, HabitType } from '@/types'
 
-const DAILY_ANCHORS = [3, 7, 14, 21, 30, 60, 90, 180, 365]
+const DAILY_ANCHORS = [3, 7, 14, 21, 30, 60, 66, 90, 180, 365]
 const PERIODIC_ANCHORS = [1, 2, 4, 8, 13, 26, 52]
 
 const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value))

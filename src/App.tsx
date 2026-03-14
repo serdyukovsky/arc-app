@@ -274,6 +274,7 @@ export default function App() {
           habitName: habit.name,
           habitType: habit.type,
           streak: yesterdayStreak,
+          freezesAvailable: habit.freezesAvailable ?? 0,
           timeOfDay: getTimeOfDay(),
         },
       })
@@ -384,7 +385,7 @@ export default function App() {
     })
 
     if (streak > prevStreak) {
-      if ((habit.type === 'daily' || habit.type === 'counter') && !habit.firstCompleted) {
+      if (!habit.firstCompleted) {
         enqueuePopup({
           type: 'first_complete',
           habitId: habit.id,
@@ -471,6 +472,18 @@ export default function App() {
         if (freezes <= 0) return
 
         void logHabit(event.habitId)
+        updateHabitLocal(event.habitId, { freezesAvailable: freezes - 1 })
+        updateHabit(event.habitId, { freezesAvailable: freezes - 1 })
+      }
+
+      if (event.type === 'streak_lost' && event.habitId) {
+        const habit = habitsRef.current.find((h) => h.id === event.habitId)
+        if (!habit) return
+        const freezes = habit.freezesAvailable ?? 0
+        if (freezes <= 0) return
+
+        const yesterdayKey = getYesterdayString()
+        void logHabit(event.habitId, 1, yesterdayKey)
         updateHabitLocal(event.habitId, { freezesAvailable: freezes - 1 })
         updateHabit(event.habitId, { freezesAvailable: freezes - 1 })
       }
