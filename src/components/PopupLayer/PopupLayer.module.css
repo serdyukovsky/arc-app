@@ -41,17 +41,18 @@
   width: 44px;
   height: 44px;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  background: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
 }
 
-.banner__illo svg {
-  width: 26px;
-  height: 26px;
+.banner__illo img {
+  width: 44px;
+  height: 44px;
+  display: block;
 }
 
 .banner__text {
@@ -127,13 +128,27 @@
 
 .modal__illo {
   width: 100%;
-  height: 232px;
-  background: rgba(255, 255, 255, 0.04);
+  height: 200px;
+  background: #ffffff;
   border-radius: 20px 20px 0 0;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.modal__illo--left {
+  justify-content: flex-start;
+  padding-left: 12px;
+}
+
+.modal__illo--center {
   justify-content: center;
-  color: #ffffff;
+}
+
+.modal__illo img {
+  width: 70%;
+  height: auto;
+  display: block;
 }
 
 .modal__body {
@@ -310,11 +325,4 @@
 .modal__btn--ghost {
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.7);
-}
-
-.defs {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
 }

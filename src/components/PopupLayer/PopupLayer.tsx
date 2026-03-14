@@ -3,6 +3,11 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { createPortal } from 'react-dom'
 import type { PopupEvent, PopupType } from '@/lib/popups'
 import { FIRST_COMPLETE_TIPS, POPUP_TEXTS } from '@/lib/popupTexts'
+import streakLostSvgRaw from '@/assets/peeps-streak-lost.svg?raw'
+import freezeOfferSvgRaw from '@/assets/peeps-freeze-offer.svg?raw'
+import milestoneSvgRaw from '@/assets/peeps-milestone.svg?raw'
+import allDoneSvg from '@/assets/peeps-all-done.svg'
+import firstCompleteSvg from '@/assets/peeps-first-complete.svg'
 import styles from './PopupLayer.module.css'
 
 interface PopupLayerProps {
@@ -12,7 +17,7 @@ interface PopupLayerProps {
   onSecondaryAction?: (event: PopupEvent) => void
 }
 
-const BANNER_TYPES: PopupType[] = ['streak_lost', 'milestone_reached']
+const BANNER_TYPES: PopupType[] = ['streak_lost', 'milestone_reached', 'freeze_offer']
 
 const isBannerType = (type: PopupType): boolean => BANNER_TYPES.includes(type)
 
@@ -23,17 +28,49 @@ const getTag = (type: PopupType): string => {
   return 'СОБЫТИЕ'
 }
 
-const getBannerSymbolId = (type: PopupType): string => {
-  if (type === 'milestone_reached') return '#illo-ok'
-  return '#illo-sad'
+const BANNER_VIEWBOX: Record<'streak_lost' | 'freeze_offer' | 'milestone_reached', string> = {
+  streak_lost: '200 110 520 520',
+  freeze_offer: '200 110 520 520',
+  milestone_reached: '130 68 280 280',
 }
 
-const getModalSymbolId = (type: PopupType): string => {
-  if (type === 'first_complete') return '#illo-ok-lg'
-  return '#illo-celebrate-lg'
+const BANNER_SVG_RAW: Record<'streak_lost' | 'freeze_offer' | 'milestone_reached', string> = {
+  streak_lost: streakLostSvgRaw,
+  freeze_offer: freezeOfferSvgRaw,
+  milestone_reached: milestoneSvgRaw,
 }
 
-const bannerTransition = { duration: 0.4, ease: [0.34, 1.4, 0.64, 1] as [number, number, number, number] }
+const patchSvgViewBox = (svg: string, viewBox: string): string => {
+  const withReplacedViewBox = svg.replace(/viewBox=['\"][^'\"]*['\"]/i, `viewBox="${viewBox}"`)
+  if (withReplacedViewBox !== svg) return withReplacedViewBox
+  return svg.replace(/<svg(\s|>)/i, `<svg viewBox="${viewBox}"$1`)
+}
+
+const toSvgDataUrl = (svg: string): string => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+
+const BANNER_FACE_ILLUSTRATIONS: Record<'streak_lost' | 'freeze_offer' | 'milestone_reached', string> = {
+  streak_lost: toSvgDataUrl(patchSvgViewBox(BANNER_SVG_RAW.streak_lost, BANNER_VIEWBOX.streak_lost)),
+  freeze_offer: toSvgDataUrl(patchSvgViewBox(BANNER_SVG_RAW.freeze_offer, BANNER_VIEWBOX.freeze_offer)),
+  milestone_reached: toSvgDataUrl(
+    patchSvgViewBox(BANNER_SVG_RAW.milestone_reached, BANNER_VIEWBOX.milestone_reached)
+  ),
+}
+
+const getBannerIllustrationSrc = (type: PopupType): string => {
+  if (type === 'streak_lost') return BANNER_FACE_ILLUSTRATIONS.streak_lost
+  if (type === 'milestone_reached') return BANNER_FACE_ILLUSTRATIONS.milestone_reached
+  return BANNER_FACE_ILLUSTRATIONS.freeze_offer
+}
+
+const getModalIllustration = (type: PopupType): { src: string; align: 'left' | 'center' } => {
+  if (type === 'first_complete') return { src: firstCompleteSvg, align: 'center' }
+  return { src: allDoneSvg, align: 'left' }
+}
+
+const bannerTransition = {
+  duration: 0.4,
+  ease: [0.34, 1.4, 0.64, 1] as [number, number, number, number],
+}
 
 export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction }: PopupLayerProps) {
   const text = useMemo(() => {
@@ -42,7 +79,7 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
   }, [event?.order])
 
   useEffect(() => {
-    if (!event || !isBannerType(event.type)) return
+    if (!event || !isBannerType(event.type) || event.type === 'freeze_offer') return
     const timeout = window.setTimeout(() => {
       onClose()
     }, 3500)
@@ -65,39 +102,63 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
     return showModal(popupEvent, text)
   }
 
-  const showBanner = (popupEvent: PopupEvent, popupText: { title: string; subtitle: string }) => (
-    <div className={styles.bannerHost}>
-      <motion.div
-        key={`banner-${popupEvent.order}`}
-        className={styles.banner}
-        initial={{ top: -120, opacity: 0 }}
-        animate={{ top: 10, opacity: 1 }}
-        exit={{ top: -120, opacity: 0 }}
-        transition={bannerTransition}
-      >
-        <div className={styles.banner__top}>
-          <div className={styles.banner__illo}>
-            <svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
-              <use href={getBannerSymbolId(popupEvent.type)} />
-            </svg>
+  const showBanner = (popupEvent: PopupEvent, popupText: { title: string; subtitle: string }) => {
+    const hasButton = popupEvent.type === 'freeze_offer'
+    const topClass = hasButton
+      ? `${styles.banner__top} ${styles['banner__top--has-btn']}`
+      : styles.banner__top
+
+    return (
+      <div className={styles.bannerHost}>
+        <motion.div
+          key={`banner-${popupEvent.order}`}
+          className={styles.banner}
+          initial={{ top: -120, opacity: 0 }}
+          animate={{ top: 10, opacity: 1 }}
+          exit={{ top: -120, opacity: 0 }}
+          transition={bannerTransition}
+        >
+          <div className={topClass}>
+            <div className={styles.banner__illo}>
+              <img
+                src={getBannerIllustrationSrc(popupEvent.type)}
+                width={44}
+                height={44}
+                alt=""
+                draggable={false}
+              />
+            </div>
+            <div className={styles.banner__text}>
+              <div className={styles.banner__title}>{popupText.title}</div>
+              <div className={styles.banner__subtitle}>{popupText.subtitle}</div>
+            </div>
+            <div
+              className={styles.banner__close}
+              role="button"
+              tabIndex={0}
+              onClick={onClose}
+              onKeyDown={handleCloseKeyDown}
+            >
+              ×
+            </div>
           </div>
-          <div className={styles.banner__text}>
-            <div className={styles.banner__title}>{popupText.title}</div>
-            <div className={styles.banner__subtitle}>{popupText.subtitle}</div>
-          </div>
-          <div
-            className={styles.banner__close}
-            role="button"
-            tabIndex={0}
-            onClick={onClose}
-            onKeyDown={handleCloseKeyDown}
-          >
-            ×
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  )
+
+          {hasButton && (
+            <button
+              type="button"
+              className={styles.banner__btn}
+              onClick={() => {
+                onPrimaryAction?.(popupEvent)
+                onClose()
+              }}
+            >
+              Заморозить
+            </button>
+          )}
+        </motion.div>
+      </div>
+    )
+  }
 
   const showModal = (popupEvent: PopupEvent, popupText: { title: string; subtitle: string }) => {
     const streaks = popupEvent.data.streaks ?? []
@@ -108,6 +169,10 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
     const streak = popupEvent.data.streak ?? 0
     const lifetimeDays = popupEvent.data.lifetimeDays ?? 0
     const firstCompleteTips = FIRST_COMPLETE_TIPS[popupEvent.data.habitType ?? 'daily']
+
+    const illo = getModalIllustration(popupEvent.type)
+    const illoAlignClass =
+      illo.align === 'left' ? styles['modal__illo--left'] : styles['modal__illo--center']
 
     return (
       <motion.div
@@ -127,10 +192,8 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
           transition={{ duration: 0.4, ease: [0.34, 1.2, 0.64, 1] }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className={styles.modal__illo}>
-            <svg width="210" height="182" viewBox="0 0 150 130" fill="none" aria-hidden="true">
-              <use href={getModalSymbolId(popupEvent.type)} />
-            </svg>
+          <div className={`${styles.modal__illo} ${illoAlignClass}`}>
+            <img src={illo.src} alt="" draggable={false} />
           </div>
 
           <div className={styles.modal__body}>
@@ -240,79 +303,10 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
 
   return createPortal(
     <div className={styles.layerRoot}>
-      <PopupIllustrationSymbols />
       <AnimatePresence initial={false} mode="wait">
         {event ? renderPopup(event) : null}
       </AnimatePresence>
     </div>,
     document.body
-  )
-}
-
-function PopupIllustrationSymbols() {
-  return (
-    <svg className={styles.defs} aria-hidden="true" focusable="false">
-      <defs>
-        <symbol id="illo-ok" viewBox="0 0 120 120">
-          <circle cx="60" cy="30" r="12" stroke="currentColor" strokeWidth="2" fill="none" />
-          <path d="M44 62c6-8 26-8 32 0" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-          <path d="M60 42v23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M45 74l-9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M75 74l9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M39 52l-10-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M81 52l10-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M54 27h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M65 27h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M48 15l6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M72 15l-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </symbol>
-
-        <symbol id="illo-sad" viewBox="0 0 120 120">
-          <circle cx="60" cy="30" r="12" stroke="currentColor" strokeWidth="2" fill="none" />
-          <path d="M45 64c7-8 23-8 30 0" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-          <path d="M60 42v24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M44 76l-8 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M76 76l8 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M52 31h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M67 31h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M52 39c3-2 11-2 14 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M26 18l8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M31 15l-2 11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </symbol>
-
-        <symbol id="illo-ok-lg" viewBox="0 0 150 130">
-          <g transform="translate(15 5)">
-            <circle cx="60" cy="30" r="12" stroke="currentColor" strokeWidth="2" fill="none" />
-            <path d="M44 62c6-8 26-8 32 0" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-            <path d="M60 42v23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M45 74l-9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M75 74l9 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M39 52l-10-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M81 52l10-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M54 27h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M65 27h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M48 15l6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M72 15l-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </g>
-        </symbol>
-
-        <symbol id="illo-celebrate-lg" viewBox="0 0 150 130">
-          <g transform="translate(15 5)">
-            <circle cx="60" cy="32" r="12" stroke="currentColor" strokeWidth="2" fill="none" />
-            <path d="M60 44v22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M60 52l-18-16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M60 52l18-16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M46 66h28" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M46 76l-8 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M74 76l8 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M28 22l8 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M92 22l-8 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M37 14l5 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M83 14l-5 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <path d="M60 10v9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </g>
-        </symbol>
-      </defs>
-    </svg>
   )
 }

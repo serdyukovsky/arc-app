@@ -1,5 +1,5 @@
 import styles from './HeroCard.module.css'
-import heroIllustration from '@/assets/hero-coil.svg'
+import heroIllustration from '@/assets/peeps-hero-card.svg'
 
 interface HeroCardProps {
   completed: number
@@ -27,7 +27,7 @@ export function HeroCard({ completed, total }: HeroCardProps) {
           draggable={false}
         />
       </div>
-      <div className={styles.textWrap}>
+      <div className={styles.textBlock}>
         <div className={styles.dim}>Сегодня</div>
         <div className={styles.text}>
           {text.split('\n').map((line) => (

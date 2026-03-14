@@ -1,7 +1,6 @@
 .card {
   margin: 0 1rem 0.875rem;
-  padding: 0.95rem;
-  background: linear-gradient(180deg, #fcfcfb 0%, #f3f3f1 100%);
+  background: #ffffff;
   border-radius: 2.6rem;
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.04);
@@ -9,23 +8,26 @@
 
 .media {
   width: 100%;
-  height: 188px;
+  height: 246px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: #ffffff;
   overflow: hidden;
-  border-radius: 2rem;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.035);
 }
 
 .illustration {
-  width: 100%;
-  height: 188px;
+  width: 85%;
+  height: auto;
   display: block;
-  object-fit: contain;
-  object-position: center center;
+  transform: translateY(38px);
 }
 
-.textWrap {
-  padding: 1rem 0.35rem 0.4rem;
+.textBlock {
+  padding: 1rem 1.2rem 1.15rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  color: #111111;
+  background: #ffffff;
 }
 
 .dim {
@@ -42,4 +44,5 @@
   font-weight: 600;
   line-height: 1.08;
   letter-spacing: -0.04em;
+  color: #111111;
 }
