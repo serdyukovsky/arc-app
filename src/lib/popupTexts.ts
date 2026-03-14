@@ -139,15 +139,6 @@ export const POPUP_TEXTS: Record<PopupType, (data: PopupEventData) => PopupTextC
   streak_lost: (data) => {
     const habitName = data.habitName ?? 'Привычка'
     const streak = data.streak ?? 0
-    const hasFreeze = (data.freezesAvailable ?? 0) > 0
-
-    if (hasFreeze) {
-      return {
-        title: `${habitName} — стрик под угрозой`,
-        subtitle: `${streak} дней на кону. Используй заморозку чтобы сохранить стрик.`,
-      }
-    }
-
     const subtitles = [
       `Даже Акела промахивался. ${streak} дней никуда не делись.`,
       'Подсдулся. Бывает. Начни сегодня — через неделю это уже история.',
@@ -166,24 +157,10 @@ export const POPUP_TEXTS: Record<PopupType, (data: PopupEventData) => PopupTextC
       subtitle: getMilestoneSubtitle(data),
     }
   },
-  freeze_offer: (data) => {
-    const habitName = data.habitName ?? 'Привычка'
-    if (data.habitType === 'periodic') {
-      const daysLeft = data.daysLeft ?? 0
-      const weekDone = data.weekDone ?? 0
-      const weekGoal = data.weekGoal ?? 0
-      return {
-        title: `${habitName} — неделя под угрозой`,
-        subtitle: `Осталось ${daysLeft} дн., выполнено ${weekDone} из ${weekGoal}. Заморозить неделю?`,
-      }
-    }
-
-    const hoursLeft = data.hoursLeft ?? 0
-    return {
-      title: `${habitName} — стрик под угрозой`,
-      subtitle: `До конца дня — ${hoursLeft} ч. Использовать заморозку?`,
-    }
-  },
+  freeze_offer: () => ({
+    title: '',
+    subtitle: '',
+  }),
   all_done: (data) => ({
     title: 'Всё выполнено',
     subtitle: getAllDoneSubtitle(data),

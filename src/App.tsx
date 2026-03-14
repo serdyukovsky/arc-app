@@ -274,7 +274,6 @@ export default function App() {
           habitName: habit.name,
           habitType: habit.type,
           streak: yesterdayStreak,
-          freezesAvailable: habit.freezesAvailable ?? 0,
           timeOfDay: getTimeOfDay(),
         },
       })
@@ -283,64 +282,6 @@ export default function App() {
     })
   }, [enqueuePopup, getHabitStreak, updateHabitLocal])
 
-  const checkFreezeOffer = useCallback(() => {
-    const now = new Date()
-    const todayKey = getDateString(now)
-    const hour = now.getHours()
-    const remainingDaysInWeek = getRemainingDaysInWeek(now)
-
-    habitsRef.current.forEach((habit) => {
-      if (habit.isArchived) return
-      if ((habit.lastFreezeOfferShown ?? null) === todayKey) return
-      const freezesAvailable = habit.freezesAvailable ?? 0
-      if (freezesAvailable <= 0) return
-
-      if (habit.type === 'daily') {
-        if ((habit.streak ?? 0) <= 0) return
-        if (isHabitDoneToday(habit, todayKey)) return
-        if (hour < 20) return
-        const hoursLeft = Math.max(0, 24 - hour)
-
-        enqueuePopup({
-          type: 'freeze_offer',
-          habitId: habit.id,
-          priority: POPUP_PRIORITY.freeze_offer,
-          data: {
-            habitName: habit.name,
-            habitType: habit.type,
-            streak: habit.streak,
-            hoursLeft,
-            timeOfDay: getTimeOfDay(now),
-          },
-        })
-        updateHabitLocal(habit.id, { lastFreezeOfferShown: todayKey })
-        return
-      }
-
-      if (habit.type !== 'periodic') return
-      const weekDone = getWeekDoneCountRef.current(habit.id, todayKey)
-      if (weekDone >= habit.goal) return
-      if (remainingDaysInWeek > 1) return
-      const canSaveWithFreeze = weekDone + freezesAvailable >= habit.goal
-      if (!canSaveWithFreeze) return
-
-      enqueuePopup({
-        type: 'freeze_offer',
-        habitId: habit.id,
-        priority: POPUP_PRIORITY.freeze_offer,
-        data: {
-          habitName: habit.name,
-          habitType: habit.type,
-          streak: habit.streak,
-          daysLeft: remainingDaysInWeek,
-          weekDone,
-          weekGoal: habit.goal,
-          timeOfDay: getTimeOfDay(now),
-        },
-      })
-      updateHabitLocal(habit.id, { lastFreezeOfferShown: todayKey })
-    })
-  }, [enqueuePopup, isHabitDoneToday, updateHabitLocal])
 
   const updateMilestoneState = (
     habitId: string,
@@ -385,7 +326,7 @@ export default function App() {
     })
 
     if (streak > prevStreak) {
-      if (!habit.firstCompleted) {
+      if (prevStreak === 0 && streak === 1 && lifetimeDays <= 1) {
         enqueuePopup({
           type: 'first_complete',
           habitId: habit.id,
@@ -398,7 +339,6 @@ export default function App() {
             timeOfDay: getTimeOfDay(),
           },
         })
-        updateHabitLocal(habit.id, { firstCompleted: true })
       }
 
       if (justHitMilestone && milestoneValue !== null) {
@@ -464,31 +404,8 @@ export default function App() {
       if (event.type === 'goal_reached' && event.habitId) {
         continueHabitWithoutGoal(event.habitId)
       }
-
-      if (event.type === 'freeze_offer' && event.habitId) {
-        const habit = habitsRef.current.find((h) => h.id === event.habitId)
-        if (!habit) return
-        const freezes = habit.freezesAvailable ?? 0
-        if (freezes <= 0) return
-
-        void logHabit(event.habitId)
-        updateHabitLocal(event.habitId, { freezesAvailable: freezes - 1 })
-        updateHabit(event.habitId, { freezesAvailable: freezes - 1 })
-      }
-
-      if (event.type === 'streak_lost' && event.habitId) {
-        const habit = habitsRef.current.find((h) => h.id === event.habitId)
-        if (!habit) return
-        const freezes = habit.freezesAvailable ?? 0
-        if (freezes <= 0) return
-
-        const yesterdayKey = getYesterdayString()
-        void logHabit(event.habitId, 1, yesterdayKey)
-        updateHabitLocal(event.habitId, { freezesAvailable: freezes - 1 })
-        updateHabit(event.habitId, { freezesAvailable: freezes - 1 })
-      }
     },
-    [continueHabitWithoutGoal, logHabit, updateHabitLocal, updateHabit]
+    [continueHabitWithoutGoal]
   )
 
   const handlePopupSecondaryAction = useCallback(
@@ -535,9 +452,8 @@ export default function App() {
     if (!isHomeHydrated || initPopupChecksRef.current) return
     initPopupChecksRef.current = true
     checkStreakLost()
-    checkFreezeOffer()
     checkAllDone()
-  }, [isHomeHydrated, checkAllDone, checkFreezeOffer, checkStreakLost])
+  }, [isHomeHydrated, checkAllDone, checkStreakLost])
 
   // checkAllDone is called explicitly:
   // 1. On initial hydration (initPopupChecks effect above)
@@ -634,22 +550,6 @@ export default function App() {
           },
         })
       },
-      freeze: (habitId: string = 'water') => {
-        const habit = resolveDebugHabit(habitId, 'daily')
-        return enqueueDebug({
-          type: 'freeze_offer',
-          habitId: habit.id,
-          priority: 2,
-          data: {
-            habitName: habit.name,
-            habitType: habit.type,
-            hoursLeft: 2,
-            weekDone: 1,
-            weekGoal: habit.type === 'periodic' ? habit.goal : 3,
-            daysLeft: 1,
-          },
-        })
-      },
       allDone: (seriesDays: number = 18) =>
         enqueueDebug({
           type: 'all_done',
@@ -738,7 +638,6 @@ export default function App() {
           "DEBUG.streakLost('water')",
           'DEBUG.milestone()',
           "DEBUG.milestone('water', 7)",
-          "DEBUG.freeze('water')",
           'DEBUG.allDone(18)',
           'DEBUG.allDoneLate(18)',
           "DEBUG.firstComplete('read')",
@@ -754,10 +653,7 @@ export default function App() {
       resetFlags: () => {
         habitsRef.current.forEach((habit) => {
           updateHabitLocal(habit.id, {
-            firstCompleted: false,
             lastStreakLostShown: null,
-            milestonePopupCount: 0,
-            lastFreezeOfferShown: null,
           })
         })
         setPopupState((prev) => setAllDoneShownToday(prev, null))
@@ -784,7 +680,6 @@ export default function App() {
       clearPopups,
       checkAllDone,
       checkStreakLost,
-      checkFreezeOffer,
       helpers: {
         getDateString,
         getTimeOfDay,
@@ -811,7 +706,6 @@ export default function App() {
     clearPopups,
     checkAllDone,
     checkStreakLost,
-    checkFreezeOffer,
     updateHabitLocal,
   ])
 

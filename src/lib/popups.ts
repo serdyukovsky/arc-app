@@ -28,7 +28,6 @@ export interface PopupEventData {
   streaks?: Array<{ name: string; streak: number; unit: string }>
   goalDays?: number
   lifetimeDays?: number
-  freezesAvailable?: number
   timeOfDay?: PopupTimeOfDay
   singleHabitAllDone?: boolean
 }

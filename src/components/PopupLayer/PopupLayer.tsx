@@ -12,7 +12,7 @@ interface PopupLayerProps {
   onSecondaryAction?: (event: PopupEvent) => void
 }
 
-const BANNER_TYPES: PopupType[] = ['streak_lost', 'milestone_reached', 'freeze_offer']
+const BANNER_TYPES: PopupType[] = ['streak_lost', 'milestone_reached']
 
 const isBannerType = (type: PopupType): boolean => BANNER_TYPES.includes(type)
 
@@ -25,8 +25,7 @@ const getTag = (type: PopupType): string => {
 
 const getBannerSymbolId = (type: PopupType): string => {
   if (type === 'milestone_reached') return '#illo-ok'
-  if (type === 'streak_lost') return '#illo-sad'
-  return '#illo-freeze'
+  return '#illo-sad'
 }
 
 const getModalSymbolId = (type: PopupType): string => {
@@ -44,8 +43,6 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
 
   useEffect(() => {
     if (!event || !isBannerType(event.type)) return
-    if (event.type === 'freeze_offer') return
-    if (event.type === 'streak_lost' && (event.data.freezesAvailable ?? 0) > 0) return
     const timeout = window.setTimeout(() => {
       onClose()
     }, 3500)
@@ -68,61 +65,39 @@ export function PopupLayer({ event, onClose, onPrimaryAction, onSecondaryAction 
     return showModal(popupEvent, text)
   }
 
-  const showBanner = (popupEvent: PopupEvent, popupText: { title: string; subtitle: string }) => {
-    const hasFreeze = popupEvent.type === 'freeze_offer'
-    const hasRecovery = popupEvent.type === 'streak_lost' && (popupEvent.data.freezesAvailable ?? 0) > 0
-    const hasButton = hasFreeze || hasRecovery
-    const topClass = hasButton
-      ? `${styles.banner__top} ${styles['banner__top--has-btn']}`
-      : styles.banner__top
-
-    return (
-      <div className={styles.bannerHost}>
-        <motion.div
-          key={`banner-${popupEvent.order}`}
-          className={styles.banner}
-          initial={{ top: -120, opacity: 0 }}
-          animate={{ top: 10, opacity: 1 }}
-          exit={{ top: -120, opacity: 0 }}
-          transition={bannerTransition}
-        >
-          <div className={topClass}>
-            <div className={styles.banner__illo}>
-              <svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
-                <use href={getBannerSymbolId(popupEvent.type)} />
-              </svg>
-            </div>
-            <div className={styles.banner__text}>
-              <div className={styles.banner__title}>{popupText.title}</div>
-              <div className={styles.banner__subtitle}>{popupText.subtitle}</div>
-            </div>
-            <div
-              className={styles.banner__close}
-              role="button"
-              tabIndex={0}
-              onClick={onClose}
-              onKeyDown={handleCloseKeyDown}
-            >
-              ×
-            </div>
+  const showBanner = (popupEvent: PopupEvent, popupText: { title: string; subtitle: string }) => (
+    <div className={styles.bannerHost}>
+      <motion.div
+        key={`banner-${popupEvent.order}`}
+        className={styles.banner}
+        initial={{ top: -120, opacity: 0 }}
+        animate={{ top: 10, opacity: 1 }}
+        exit={{ top: -120, opacity: 0 }}
+        transition={bannerTransition}
+      >
+        <div className={styles.banner__top}>
+          <div className={styles.banner__illo}>
+            <svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
+              <use href={getBannerSymbolId(popupEvent.type)} />
+            </svg>
           </div>
-
-          {hasButton && (
-            <button
-              type="button"
-              className={styles.banner__btn}
-              onClick={() => {
-                onPrimaryAction?.(popupEvent)
-                onClose()
-              }}
-            >
-              {hasRecovery ? 'Восстановить' : 'Заморозить'}
-            </button>
-          )}
-        </motion.div>
-      </div>
-    )
-  }
+          <div className={styles.banner__text}>
+            <div className={styles.banner__title}>{popupText.title}</div>
+            <div className={styles.banner__subtitle}>{popupText.subtitle}</div>
+          </div>
+          <div
+            className={styles.banner__close}
+            role="button"
+            tabIndex={0}
+            onClick={onClose}
+            onKeyDown={handleCloseKeyDown}
+          >
+            ×
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  )
 
   const showModal = (popupEvent: PopupEvent, popupText: { title: string; subtitle: string }) => {
     const streaks = popupEvent.data.streaks ?? []
@@ -303,22 +278,6 @@ function PopupIllustrationSymbols() {
           <path d="M52 39c3-2 11-2 14 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           <path d="M26 18l8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           <path d="M31 15l-2 11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </symbol>
-
-        <symbol id="illo-freeze" viewBox="0 0 120 120">
-          <circle cx="60" cy="32" r="12" stroke="currentColor" strokeWidth="2" fill="none" />
-          <path d="M60 44v24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M46 60h28" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M44 76l-8 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M76 76l8 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M20 52h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M88 52h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M24 38l8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M96 38l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M24 66l8-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M96 66l-8-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M54 30h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          <path d="M65 30h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </symbol>
 
         <symbol id="illo-ok-lg" viewBox="0 0 150 130">
