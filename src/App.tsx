@@ -19,6 +19,9 @@ import {
   getTimeOfDay,
   getYesterdayString,
   isDeadWeek,
+  isStreakLostShownToday,
+  markStreakLostShown,
+  resetStreakLostShown,
   setAllDoneShownToday,
   type PopupEventInput,
   type PopupState,
@@ -251,7 +254,7 @@ export default function App() {
 
     habitsRef.current.forEach((habit) => {
       if (habit.isArchived) return
-      if ((habit.lastStreakLostShown ?? null) === todayKey) return
+      if (isStreakLostShownToday(habit.id)) return
 
       const currentStreak = getHabitStreak(habit)
       const yesterdayStreak = getHabitStreak(habit, yesterdayKey)
@@ -278,9 +281,9 @@ export default function App() {
         },
       })
 
-      updateHabitLocal(habit.id, { lastStreakLostShown: todayKey })
+      markStreakLostShown(habit.id)
     })
-  }, [enqueuePopup, getHabitStreak, updateHabitLocal])
+  }, [enqueuePopup, getHabitStreak])
 
 
   const updateMilestoneState = (
@@ -651,11 +654,7 @@ export default function App() {
         return lines
       },
       resetFlags: () => {
-        habitsRef.current.forEach((habit) => {
-          updateHabitLocal(habit.id, {
-            lastStreakLostShown: null,
-          })
-        })
+        resetStreakLostShown()
         setPopupState((prev) => setAllDoneShownToday(prev, null))
       },
       checkAllDone: () => checkAllDone(),

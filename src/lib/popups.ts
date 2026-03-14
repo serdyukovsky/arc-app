@@ -82,6 +82,7 @@ const hasDuplicateEvent = (state: PopupState, event: PopupEventInput): boolean =
 }
 
 const STORAGE_KEY_ALL_DONE = 'arc:allDoneShownToday'
+const STORAGE_KEY_STREAK_LOST = 'arc:streakLostShown'
 
 const loadAllDoneShownToday = (): string | null => {
   try {
@@ -104,6 +105,52 @@ const persistAllDoneShownToday = (value: string | null) => {
   } catch {
     // silent
   }
+}
+
+const loadStreakLostShown = (): Record<string, string> => {
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY_STREAK_LOST)
+    if (!stored) return {}
+    const parsed = JSON.parse(stored) as Record<string, string>
+    const todayKey = toKey(new Date())
+    const valid: Record<string, string> = {}
+    for (const [habitId, dateKey] of Object.entries(parsed)) {
+      if (dateKey === todayKey) valid[habitId] = dateKey
+    }
+    return valid
+  } catch {
+    return {}
+  }
+}
+
+const persistStreakLostShown = (map: Record<string, string>) => {
+  try {
+    if (Object.keys(map).length === 0) {
+      sessionStorage.removeItem(STORAGE_KEY_STREAK_LOST)
+    } else {
+      sessionStorage.setItem(STORAGE_KEY_STREAK_LOST, JSON.stringify(map))
+    }
+  } catch {
+    // silent
+  }
+}
+
+let streakLostShownMap = loadStreakLostShown()
+
+export const isStreakLostShownToday = (habitId: string): boolean => {
+  const todayKey = toKey(new Date())
+  return streakLostShownMap[habitId] === todayKey
+}
+
+export const markStreakLostShown = (habitId: string): void => {
+  const todayKey = toKey(new Date())
+  streakLostShownMap[habitId] = todayKey
+  persistStreakLostShown(streakLostShownMap)
+}
+
+export const resetStreakLostShown = (): void => {
+  streakLostShownMap = {}
+  persistStreakLostShown(streakLostShownMap)
 }
 
 export const createInitialPopupState = (): PopupState => ({
