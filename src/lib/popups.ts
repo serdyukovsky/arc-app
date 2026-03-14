@@ -81,14 +81,44 @@ const hasDuplicateEvent = (state: PopupState, event: PopupEventInput): boolean =
   return state.queue.some((entry) => same(entry))
 }
 
+const STORAGE_KEY_ALL_DONE = 'arc:allDoneShownToday'
+
+const loadAllDoneShownToday = (): string | null => {
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY_ALL_DONE)
+    if (!stored) return null
+    const todayKey = toKey(new Date())
+    return stored === todayKey ? stored : null
+  } catch {
+    return null
+  }
+}
+
+const persistAllDoneShownToday = (value: string | null) => {
+  try {
+    if (value) {
+      sessionStorage.setItem(STORAGE_KEY_ALL_DONE, value)
+    } else {
+      sessionStorage.removeItem(STORAGE_KEY_ALL_DONE)
+    }
+  } catch {
+    // silent
+  }
+}
+
 export const createInitialPopupState = (): PopupState => ({
   queue: [],
   active: null,
-  allDoneShownToday: null,
+  allDoneShownToday: loadAllDoneShownToday(),
 })
 
 export const resetPopupOrderCounter = () => {
   popupOrderCounter = 0
+}
+
+export const setAllDoneShownToday = (state: PopupState, dateKey: string | null): PopupState => {
+  persistAllDoneShownToday(dateKey)
+  return { ...state, allDoneShownToday: dateKey }
 }
 
 export const enqueuePopupEvent = (state: PopupState, event: PopupEventInput): PopupState => {

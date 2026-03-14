@@ -9,7 +9,6 @@ import { Header } from '@/components/Header/Header'
 import { HeroCard } from '@/components/HeroCard/HeroCard'
 import { HabitCard } from '@/components/HabitCard/HabitCard'
 import { Drawer } from '@/components/Drawer/Drawer'
-import { GoalCompleteSheet } from '@/components/GoalCompleteSheet/GoalCompleteSheet'
 import { Icon } from '@/components/Icon/Icon'
 import styles from './HomeScreen.module.css'
 
@@ -35,8 +34,6 @@ interface HomeScreenProps {
     milestoneValue: number | null
     justCompletedGoal: boolean
   } | null
-  onGoalComplete: (habitId: string) => void
-  onGoalContinue: (habitId: string) => void
   onEditHabit: (habit: Habit, fromDrawer?: boolean) => void
   restoreDrawerHabitId?: string | null
   onRestoreDrawerHandled?: () => void
@@ -79,15 +76,12 @@ export function HomeScreen({
   undoLog,
   showToast,
   updateMilestoneState,
-  onGoalComplete,
-  onGoalContinue,
   onEditHabit,
   restoreDrawerHabitId = null,
   onRestoreDrawerHandled,
 }: HomeScreenProps) {
   const [drawerHabit, setDrawerHabit] = useState<Habit | null>(null)
   const [pulseHabitId, setPulseHabitId] = useState<string | null>(null)
-  const [goalCompleteHabitId, setGoalCompleteHabitId] = useState<string | null>(null)
   const [selectedHeaderDay, setSelectedHeaderDay] = useState<string | null>(null)
   const [drawerExpandingToEdit, setDrawerExpandingToEdit] = useState(false)
   const togglePendingRef = useRef<Set<string>>(new Set())
@@ -113,9 +107,6 @@ export function HomeScreen({
     onRestoreDrawerHandled?.()
   }, [restoreDrawerHabitId, habits, onRestoreDrawerHandled])
 
-  const goalCompleteHabit = goalCompleteHabitId
-    ? habits.find((habit) => habit.id === goalCompleteHabitId) ?? null
-    : null
 
   const formatMilestoneToast = (value: number, habit: Habit): string => {
     const unit = habit.type === 'periodic' ? 'нед' : 'д'
@@ -138,9 +129,7 @@ export function HomeScreen({
         showToast(formatMilestoneToast(result.milestoneValue, habit))
         triggerPulse(habit.id)
       }
-      if (result.justCompletedGoal) {
-        setGoalCompleteHabitId(habit.id)
-      }
+      // Goal completion is handled by the popup system (goal_reached popup)
     })
   }
 
@@ -480,22 +469,6 @@ export function HomeScreen({
         )}
       </Drawer>
 
-      <GoalCompleteSheet
-        open={!!goalCompleteHabit}
-        habitName={goalCompleteHabit?.name}
-        onComplete={() => {
-          if (goalCompleteHabit) {
-            onGoalComplete(goalCompleteHabit.id)
-            setGoalCompleteHabitId(null)
-          }
-        }}
-        onContinue={() => {
-          if (goalCompleteHabit) {
-            onGoalContinue(goalCompleteHabit.id)
-            setGoalCompleteHabitId(null)
-          }
-        }}
-      />
     </div>
   )
 }

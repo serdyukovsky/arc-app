@@ -13,13 +13,13 @@ import {
   clearPopupQueue,
   closeActivePopup as closeActivePopupState,
   createInitialPopupState,
-  emitMilestoneToast,
   enqueuePopupEvent,
   getDateString,
   getRemainingDaysInWeek,
   getTimeOfDay,
   getYesterdayString,
   isDeadWeek,
+  setAllDoneShownToday,
   type PopupEventInput,
   type PopupState,
 } from '@/lib/popups'
@@ -89,7 +89,6 @@ export default function App() {
   const habitsRef = useRef(habits)
   const popupStateRef = useRef(popupState)
   const initPopupChecksRef = useRef(false)
-  const lastHandledPopupKeyRef = useRef<string | null>(null)
   const isDoneTodayRef = useRef(isDoneToday)
   const getDoneDatesRef = useRef(getDoneDates)
   const getStreakRef = useRef(getStreak)
@@ -115,23 +114,6 @@ export default function App() {
     getWeekDoneCountRef.current = getWeekDoneCount
   }, [isDoneToday, getDoneDates, getStreak, getWeekDoneCount])
 
-  useEffect(() => {
-    const active = popupState.active
-    if (!active) return
-
-    const popupKey = `${active.order}:${active.type}:${active.habitId ?? 'null'}`
-    if (lastHandledPopupKeyRef.current === popupKey) return
-    lastHandledPopupKeyRef.current = popupKey
-
-    if (active.type !== 'milestone_reached' || !active.habitId || active.data.singleHabitAllDone) {
-      return
-    }
-
-    const habit = habitsRef.current.find((item) => item.id === active.habitId)
-    if (!habit) return
-    const count = habit.milestonePopupCount ?? 0
-    updateHabitLocal(habit.id, { milestonePopupCount: count + 1 })
-  }, [popupState.active, updateHabitLocal])
 
   const navigateTo = (next: Screen) => {
     if (next === screen) return
@@ -259,7 +241,7 @@ export default function App() {
       })
     }
 
-    setPopupState((prev) => ({ ...prev, allDoneShownToday: todayKey }))
+    setPopupState((prev) => setAllDoneShownToday(prev, todayKey))
     return true
   }, [enqueuePopup, getHabitStreak, isHabitClosedForDate])
 
@@ -419,24 +401,19 @@ export default function App() {
       }
 
       if (justHitMilestone && milestoneValue !== null) {
-        const popupCount = habit.milestonePopupCount ?? 0
-        if (popupCount < 3) {
-          enqueuePopup({
-            type: 'milestone_reached',
-            habitId: habit.id,
-            priority: POPUP_PRIORITY.milestone_reached,
-            data: {
-              streak,
-              milestone: milestoneValue,
-              habitName: habit.name,
-              habitType: habit.type,
-              lifetimeDays,
-              timeOfDay: getTimeOfDay(),
-            },
-          })
-        } else {
-          emitMilestoneToast(habit.name, milestoneValue)
-        }
+        enqueuePopup({
+          type: 'milestone_reached',
+          habitId: habit.id,
+          priority: POPUP_PRIORITY.milestone_reached,
+          data: {
+            streak,
+            milestone: milestoneValue,
+            habitName: habit.name,
+            habitType: habit.type,
+            lifetimeDays,
+            timeOfDay: getTimeOfDay(),
+          },
+        })
       }
 
       if (justCompletedGoal && goalDays !== null) {
@@ -486,8 +463,19 @@ export default function App() {
       if (event.type === 'goal_reached' && event.habitId) {
         continueHabitWithoutGoal(event.habitId)
       }
+
+      if (event.type === 'freeze_offer' && event.habitId) {
+        const habit = habitsRef.current.find((h) => h.id === event.habitId)
+        if (!habit) return
+        const freezes = habit.freezesAvailable ?? 0
+        if (freezes <= 0) return
+
+        void logHabit(event.habitId)
+        updateHabitLocal(event.habitId, { freezesAvailable: freezes - 1 })
+        updateHabit(event.habitId, { freezesAvailable: freezes - 1 })
+      }
     },
-    [continueHabitWithoutGoal]
+    [continueHabitWithoutGoal, logHabit, updateHabitLocal, updateHabit]
   )
 
   const handlePopupSecondaryAction = useCallback(
@@ -538,10 +526,10 @@ export default function App() {
     checkAllDone()
   }, [isHomeHydrated, checkAllDone, checkFreezeOffer, checkStreakLost])
 
-  useEffect(() => {
-    if (!isHomeHydrated) return
-    checkAllDone()
-  }, [isHomeHydrated, logs, habits, checkAllDone])
+  // checkAllDone is called explicitly:
+  // 1. On initial hydration (initPopupChecks effect above)
+  // 2. After each habit log (via updateMilestoneState)
+  // No need for a reactive effect on logs/habits — it caused duplicate popups.
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -722,7 +710,7 @@ export default function App() {
         if (active) {
           rows.unshift({
             order: active.order,
-            type: `${active.type} (active)`,
+            type: `${active.type} (active)` as any,
             habitId: active.habitId,
             priority: active.priority,
           })
@@ -759,7 +747,7 @@ export default function App() {
             lastFreezeOfferShown: null,
           })
         })
-        setPopupState((prev) => ({ ...prev, allDoneShownToday: null }))
+        setPopupState((prev) => setAllDoneShownToday(prev, null))
       },
       checkAllDone: () => checkAllDone(),
       getState: () => popupStateRef.current,
@@ -900,8 +888,6 @@ export default function App() {
                 undoLog={undoLog}
                 showToast={showToast}
                 updateMilestoneState={updateMilestoneState}
-                onGoalComplete={archiveHabit}
-                onGoalContinue={continueHabitWithoutGoal}
                 onEditHabit={(habit, fromDrawer = false) => {
                   setRestoreDrawerHabitId(null)
                   setEditFromDrawer(fromDrawer)
