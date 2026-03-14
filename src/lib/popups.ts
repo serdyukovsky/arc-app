@@ -86,7 +86,7 @@ const STORAGE_KEY_STREAK_LOST = 'arc:streakLostShown'
 
 const loadAllDoneShownToday = (): string | null => {
   try {
-    const stored = sessionStorage.getItem(STORAGE_KEY_ALL_DONE)
+    const stored = localStorage.getItem(STORAGE_KEY_ALL_DONE)
     if (!stored) return null
     const todayKey = toKey(new Date())
     return stored === todayKey ? stored : null
@@ -98,9 +98,9 @@ const loadAllDoneShownToday = (): string | null => {
 const persistAllDoneShownToday = (value: string | null) => {
   try {
     if (value) {
-      sessionStorage.setItem(STORAGE_KEY_ALL_DONE, value)
+      localStorage.setItem(STORAGE_KEY_ALL_DONE, value)
     } else {
-      sessionStorage.removeItem(STORAGE_KEY_ALL_DONE)
+      localStorage.removeItem(STORAGE_KEY_ALL_DONE)
     }
   } catch {
     // silent
@@ -109,7 +109,7 @@ const persistAllDoneShownToday = (value: string | null) => {
 
 const loadStreakLostShown = (): Record<string, string> => {
   try {
-    const stored = sessionStorage.getItem(STORAGE_KEY_STREAK_LOST)
+    const stored = localStorage.getItem(STORAGE_KEY_STREAK_LOST)
     if (!stored) return {}
     const parsed = JSON.parse(stored) as Record<string, string>
     const todayKey = toKey(new Date())
@@ -126,9 +126,9 @@ const loadStreakLostShown = (): Record<string, string> => {
 const persistStreakLostShown = (map: Record<string, string>) => {
   try {
     if (Object.keys(map).length === 0) {
-      sessionStorage.removeItem(STORAGE_KEY_STREAK_LOST)
+      localStorage.removeItem(STORAGE_KEY_STREAK_LOST)
     } else {
-      sessionStorage.setItem(STORAGE_KEY_STREAK_LOST, JSON.stringify(map))
+      localStorage.setItem(STORAGE_KEY_STREAK_LOST, JSON.stringify(map))
     }
   } catch {
     // silent
