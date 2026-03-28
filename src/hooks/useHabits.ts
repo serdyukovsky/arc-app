@@ -50,6 +50,11 @@ const withMilestoneDefaults = (
 }
 
 const normalizeHabit = (habit: Habit): Habit => {
+  // Map PocketBase snake_case to camelCase
+  const raw = habit as any
+  if (raw.reminder_time !== undefined && habit.reminderTime === undefined) {
+    habit.reminderTime = raw.reminder_time
+  }
   const goalDays = coerceGoalDays(habit)
   const builtMilestones = buildMilestones(goalDays, habit.type)
   const rawMilestones = habit.milestones ?? null
@@ -317,6 +322,7 @@ export function useHabits(token: string | null, userId: string | null) {
           goalDays: data.goalDays,
           daysGoal: data.goalDays,
           reminder: data.reminder,
+          reminderTime: data.reminderTime,
           created: new Date().toISOString(),
           isArchived: false,
           order: habits.length,
@@ -341,6 +347,7 @@ export function useHabits(token: string | null, userId: string | null) {
           goal: data.goal,
           daysGoal: data.goalDays,
           reminder: data.reminder,
+          reminder_time: data.reminderTime || null,
           user: userId,
           isArchived: false,
           order: habits.length,
@@ -384,6 +391,7 @@ export function useHabits(token: string | null, userId: string | null) {
         freezesAvailable,
         goalDays,
         daysGoal,
+        reminderTime,
         ...rest
       } = data
 
@@ -391,6 +399,7 @@ export function useHabits(token: string | null, userId: string | null) {
         ...rest,
         ...(goalDays !== undefined ? { daysGoal: goalDays } : {}),
         ...(goalDays === undefined && daysGoal !== undefined ? { daysGoal } : {}),
+        ...(reminderTime !== undefined ? { reminder_time: reminderTime || null } : {}),
       }
 
       const res = await pbRequest(`/api/collections/habits/records/${id}`, {

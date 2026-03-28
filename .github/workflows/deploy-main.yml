@@ -73,6 +73,17 @@ jobs:
             -e "ssh -p $PORT" \
             dist/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
 
+      - name: Deploy PocketBase hooks
+        run: |
+          set -eu
+          PORT="${DEPLOY_PORT:-22}"
+          rsync -az \
+            -e "ssh -p $PORT" \
+            pocketbase/pb_hooks/arc.pb.js \
+            "$DEPLOY_USER@$DEPLOY_HOST:/opt/arc-pocketbase/pb_hooks/arc.pb.js"
+          ssh -p "$PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "systemctl restart arc-pocketbase && echo 'PocketBase restarted'"
+
       - name: Optional reload command
         run: |
           set -eu

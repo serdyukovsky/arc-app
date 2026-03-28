@@ -418,3 +418,179 @@ routerAdd("POST", "/api/arc/state", function(e) {
 
   return e.json(200, { ok: true });
 }, $apis.requireAuth("users"));
+
+// ─── Notification Settings ───────────────────────────────────────────────────
+
+routerAdd("POST", "/api/arc/heartbeat", function(e) {
+  var body = new DynamicModel({ timezone: "" });
+  try { e.bindBody(body); } catch(err) {}
+
+  var userId = e.auth.id;
+  var collection;
+  try {
+    collection = $app.findCollectionByNameOrId("notification_settings");
+  } catch(err) {
+    return e.json(200, { ok: true, skip: "collection_missing" });
+  }
+
+  var record = null;
+  try {
+    var results = $app.findRecordsByFilter(
+      "notification_settings",
+      "user = {:userId}",
+      "-created",
+      1,
+      0,
+      { userId: userId }
+    );
+    if (results && results.length > 0) record = results[0];
+  } catch(err) {}
+
+  var now = new Date().toISOString();
+
+  if (!record) {
+    record = new Record(collection);
+    record.set("user", userId);
+    record.set("enabled", true);
+    record.set("timezone", String(body.timezone || ""));
+    record.set("quiet_hours_from", "23:00");
+    record.set("quiet_hours_to", "07:00");
+    record.set("morning_digest", true);
+    record.set("morning_digest_time", "08:00");
+    record.set("evening_summary", true);
+    record.set("evening_summary_time", "21:00");
+    record.set("weekly_report", true);
+    record.set("weekly_report_day", 0);
+    record.set("streak_protection", true);
+    record.set("last_active", now);
+  } else {
+    record.set("last_active", now);
+    if (body.timezone) {
+      record.set("timezone", String(body.timezone));
+    }
+  }
+
+  try {
+    $app.save(record);
+  } catch(err) {}
+
+  return e.json(200, { ok: true });
+}, $apis.requireAuth("users"));
+
+routerAdd("GET", "/api/arc/notification-settings", function(e) {
+  var userId = e.auth.id;
+  var record = null;
+  try {
+    var results = $app.findRecordsByFilter(
+      "notification_settings",
+      "user = {:userId}",
+      "-created",
+      1,
+      0,
+      { userId: userId }
+    );
+    if (results && results.length > 0) record = results[0];
+  } catch(err) {}
+
+  if (!record) {
+    return e.json(200, {
+      enabled: true,
+      timezone: "",
+      quiet_hours_from: "23:00",
+      quiet_hours_to: "07:00",
+      morning_digest: true,
+      morning_digest_time: "08:00",
+      evening_summary: true,
+      evening_summary_time: "21:00",
+      weekly_report: true,
+      weekly_report_day: 0,
+      streak_protection: true,
+      last_active: "",
+    });
+  }
+
+  return e.json(200, {
+    id: record.id,
+    enabled: record.getBool("enabled"),
+    timezone: record.getString("timezone"),
+    quiet_hours_from: record.getString("quiet_hours_from"),
+    quiet_hours_to: record.getString("quiet_hours_to"),
+    morning_digest: record.getBool("morning_digest"),
+    morning_digest_time: record.getString("morning_digest_time"),
+    evening_summary: record.getBool("evening_summary"),
+    evening_summary_time: record.getString("evening_summary_time"),
+    weekly_report: record.getBool("weekly_report"),
+    weekly_report_day: record.getInt("weekly_report_day"),
+    streak_protection: record.getBool("streak_protection"),
+    last_active: record.getString("last_active"),
+  });
+}, $apis.requireAuth("users"));
+
+routerAdd("POST", "/api/arc/notification-settings", function(e) {
+  var body = new DynamicModel({
+    enabled: true,
+    timezone: "",
+    quiet_hours_from: "",
+    quiet_hours_to: "",
+    morning_digest: true,
+    morning_digest_time: "",
+    evening_summary: true,
+    evening_summary_time: "",
+    weekly_report: true,
+    weekly_report_day: 0,
+    streak_protection: true,
+  });
+  try { e.bindBody(body); } catch(err) {}
+
+  var userId = e.auth.id;
+  var collection = $app.findCollectionByNameOrId("notification_settings");
+  var record = null;
+  try {
+    var results = $app.findRecordsByFilter(
+      "notification_settings",
+      "user = {:userId}",
+      "-created",
+      1,
+      0,
+      { userId: userId }
+    );
+    if (results && results.length > 0) record = results[0];
+  } catch(err) {}
+
+  if (!record) {
+    record = new Record(collection);
+    record.set("user", userId);
+    record.set("last_active", new Date().toISOString());
+  }
+
+  var fields = [
+    "enabled", "timezone", "quiet_hours_from", "quiet_hours_to",
+    "morning_digest", "morning_digest_time",
+    "evening_summary", "evening_summary_time",
+    "weekly_report", "weekly_report_day",
+    "streak_protection"
+  ];
+
+  for (var i = 0; i < fields.length; i++) {
+    var f = fields[i];
+    var val = body[f];
+    if (val !== undefined && val !== null && val !== "") {
+      record.set(f, val);
+    }
+  }
+
+  // Handle boolean false explicitly (DynamicModel may coerce)
+  if (body.enabled === false) record.set("enabled", false);
+  if (body.morning_digest === false) record.set("morning_digest", false);
+  if (body.evening_summary === false) record.set("evening_summary", false);
+  if (body.weekly_report === false) record.set("weekly_report", false);
+  if (body.streak_protection === false) record.set("streak_protection", false);
+
+  try {
+    $app.save(record);
+  } catch(err) {
+    return e.json(400, { status: 400, message: "save failed" });
+  }
+
+  return e.json(200, { ok: true });
+}, $apis.requireAuth("users"));

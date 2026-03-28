@@ -360,6 +360,25 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.customTimeRow {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 0 0.25rem;
+}
+
+.customTimeInput {
+  background: #f7f7f7;
+  border: none;
+  border-radius: 1rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: inherit;
+  color: #000;
+  text-align: center;
+  width: auto;
+}
+
 .nextBtn {
   width: 100%;
   background: #000;

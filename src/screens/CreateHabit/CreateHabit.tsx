@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { Habit, HabitType, Category } from '@/types'
+import type { Habit, HabitType, Category, ReminderSlot } from '@/types'
 import { triggerHaptic } from '@/lib/haptics'
 import Step1 from './Step1'
 import Step2 from './Step2'
@@ -40,8 +40,6 @@ interface CreateHabitProps {
   showToast: (msg: string) => void
 }
 
-type Reminder = 'none' | 'morning' | 'day' | 'evening'
-
 const getDefaultGoal = (type: HabitType): number => {
   if (type === 'periodic') return 3
   if (type === 'counter') return 8
@@ -72,7 +70,8 @@ export function CreateHabit({
   const [type, setType] = useState<HabitType>('daily')
   const [goal, setGoal] = useState(1)
   const [goalDays, setGoalDays] = useState<number | null>(21)
-  const [reminder, setReminder] = useState<Reminder>('none')
+  const [reminder, setReminder] = useState<ReminderSlot>('none')
+  const [reminderTime, setReminderTime] = useState('09:00')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const submitLockRef = useRef(false)
 
@@ -84,6 +83,7 @@ export function CreateHabit({
     setGoal(1)
     setGoalDays(21)
     setReminder('none')
+    setReminderTime('09:00')
     setIsSubmitting(false)
     submitLockRef.current = false
   }
@@ -96,6 +96,7 @@ export function CreateHabit({
     setGoal(habit.type === 'daily' ? 1 : habit.goal)
     setGoalDays(habit.goalDays ?? habit.daysGoal ?? null)
     setReminder(habit.reminder)
+    setReminderTime(habit.reminderTime ?? '09:00')
     setIsSubmitting(false)
     submitLockRef.current = false
   }
@@ -140,6 +141,7 @@ export function CreateHabit({
       goal: type === 'daily' ? 1 : goal,
       goalDays,
       reminder,
+      ...(reminder === 'custom' ? { reminderTime } : {}),
     }
 
     if (editingHabit && onUpdate) {
@@ -240,7 +242,14 @@ export function CreateHabit({
                     onGoalDaysChange={setGoalDays}
                   />
                 )}
-                {step === 3 && <Step3 reminder={reminder} onReminderChange={setReminder} />}
+                {step === 3 && (
+                  <Step3
+                    reminder={reminder}
+                    reminderTime={reminderTime}
+                    onReminderChange={setReminder}
+                    onReminderTimeChange={setReminderTime}
+                  />
+                )}
               </motion.div>
             </AnimatePresence>
           </div>

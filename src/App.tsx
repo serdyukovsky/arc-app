@@ -7,6 +7,7 @@ import { useHabitLogs } from '@/hooks/useHabitLogs'
 import { useToast } from '@/hooks/useToast'
 import type { Habit } from '@/types'
 import { parseKey } from '@/lib/date'
+import { pbRequest } from '@/lib/pb'
 import { buildMilestones, getCurrentMilestoneIndex, getMilestoneValueByIndex } from '@/lib/milestones'
 import {
   POPUP_PRIORITY,
@@ -32,6 +33,7 @@ import { HomeScreen } from '@/screens/HomeScreen/HomeScreen'
 import { AnalyticsScreen } from '@/screens/AnalyticsScreen/AnalyticsScreen'
 import { ArchiveScreen } from '@/screens/ArchiveScreen/ArchiveScreen'
 import { ProfileScreen } from '@/screens/ProfileScreen/ProfileScreen'
+import { NotificationSettingsScreen } from '@/screens/NotificationSettings/NotificationSettings'
 import { CreateHabit, type CreateHabitData } from '@/screens/CreateHabit/CreateHabit'
 import { PopupLayer } from '@/components/PopupLayer/PopupLayer'
 import styles from './App.module.css'
@@ -56,6 +58,7 @@ export default function App() {
   const [editFromDrawer, setEditFromDrawer] = useState(false)
   const [restoreDrawerHabitId, setRestoreDrawerHabitId] = useState<string | null>(null)
   const [popupState, setPopupState] = useState<PopupState>(createInitialPopupState())
+  const [notifSettingsOpen, setNotifSettingsOpen] = useState(false)
 
   const telegram = useTelegram()
   const { token, userId, isLoading: authLoading } = useAuth(telegram.getInitData)
@@ -101,6 +104,16 @@ export default function App() {
     const cleanup = telegram.bindSafeAreaCssVars()
     return cleanup
   }, [])
+
+  // Heartbeat: send timezone + last_active to backend
+  useEffect(() => {
+    if (!token) return
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const send = () => pbRequest('/api/arc/heartbeat', { method: 'POST', token, body: { timezone: tz } })
+    send()
+    const interval = setInterval(send, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [token])
 
   useEffect(() => {
     habitsRef.current = habits
@@ -441,6 +454,7 @@ export default function App() {
       goalDays,
       daysGoal: goalDays,
       reminder: data.reminder,
+      reminderTime: data.reminderTime,
       streak,
       bestStreak,
       goalCompleted,
@@ -824,6 +838,7 @@ export default function App() {
                 user={tgUser}
                 totalHabits={habits.length}
                 bestStreak={bestStreak}
+                onOpenNotifications={() => setNotifSettingsOpen(true)}
               />
             )}
           </motion.div>
@@ -860,6 +875,12 @@ export default function App() {
         fullScreen={!!editHabit}
         disableEnterAnimation={editFromDrawer}
         showToast={showToast}
+      />
+
+      <NotificationSettingsScreen
+        open={notifSettingsOpen}
+        onClose={() => setNotifSettingsOpen(false)}
+        token={token}
       />
 
       <PopupLayer

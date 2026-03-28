@@ -5,9 +5,10 @@ interface ProfileScreenProps {
   user: { first_name?: string; last_name?: string; photo_url?: string } | null
   totalHabits: number
   bestStreak: number
+  onOpenNotifications: () => void
 }
 
-export function ProfileScreen({ user, totalHabits, bestStreak }: ProfileScreenProps) {
+export function ProfileScreen({ user, totalHabits, bestStreak, onOpenNotifications }: ProfileScreenProps) {
   const name = user
     ? [user.first_name, user.last_name].filter(Boolean).join(' ')
     : 'Пользователь'
@@ -39,11 +40,11 @@ export function ProfileScreen({ user, totalHabits, bestStreak }: ProfileScreenPr
       </div>
 
       <div className={styles.section}>
-        <div className={styles.settingRow}>
+        <button className={styles.settingRow} onClick={onOpenNotifications}>
           <Icon name="notifications" size={22} />
           <span>Уведомления</span>
-          <span className={styles.badge}>Скоро</span>
-        </div>
+          <Icon name="chevron_right" size={20} style={{ marginLeft: 'auto', opacity: 0.3 }} />
+        </button>
       </div>
     </div>
   )

@@ -79,6 +79,13 @@
   padding: 16px 20px;
   font-size: 15px;
   font-weight: 500;
+  width: 100%;
+  border: none;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
 }
 
 .badge {
