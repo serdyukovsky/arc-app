@@ -72,6 +72,7 @@ export interface NotificationSettings {
   weeklyReport: boolean
   weeklyReportDay: number // 0=Sunday, 1=Monday, etc.
   streakProtection: boolean
+  strictMode: boolean
   lastActive: string
 }
 
@@ -87,6 +88,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS: Omit<NotificationSettings, 'id' | 'u
   weeklyReport: true,
   weeklyReportDay: 0,
   streakProtection: true,
+  strictMode: false,
   lastActive: '',
 }
 

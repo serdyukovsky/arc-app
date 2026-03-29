@@ -5,10 +5,12 @@ interface ProfileScreenProps {
   user: { first_name?: string; last_name?: string; photo_url?: string } | null
   totalHabits: number
   bestStreak: number
+  strictMode: boolean
+  onStrictModeChange: (v: boolean) => void
   onOpenNotifications: () => void
 }
 
-export function ProfileScreen({ user, totalHabits, bestStreak, onOpenNotifications }: ProfileScreenProps) {
+export function ProfileScreen({ user, totalHabits, bestStreak, strictMode, onStrictModeChange, onOpenNotifications }: ProfileScreenProps) {
   const name = user
     ? [user.first_name, user.last_name].filter(Boolean).join(' ')
     : 'Пользователь'
@@ -44,6 +46,21 @@ export function ProfileScreen({ user, totalHabits, bestStreak, onOpenNotificatio
           <Icon name="notifications" size={22} />
           <span>Уведомления</span>
           <Icon name="chevron_right" size={20} style={{ marginLeft: 'auto', opacity: 0.3 }} />
+        </button>
+      </div>
+
+      <div className={styles.section} style={{ marginTop: 12 }}>
+        <button className={styles.settingRow} onClick={() => onStrictModeChange(!strictMode)}>
+          <Icon name={strictMode ? 'lock' : 'lock_open'} size={22} />
+          <div>
+            <span>Строгий режим</span>
+            <div className={styles.settingSub}>
+              {strictMode ? 'Только сегодня' : 'Можно отмечать за 3 дня'}
+            </div>
+          </div>
+          <div className={`${styles.strictToggle} ${strictMode ? styles.strictOn : ''}`}>
+            <div className={styles.strictKnob} />
+          </div>
         </button>
       </div>
     </div>

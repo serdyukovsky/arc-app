@@ -23,8 +23,9 @@ interface HomeScreenProps {
   getBestStreak: (habit: Habit) => number
   getWeekDoneCount: (id: string, dateKey?: string) => number
   getLogsForHabit: (id: string) => HabitLog[]
-  logHabit: (id: string, value?: number) => Promise<any>
-  undoLog: (id: string) => Promise<boolean>
+  logHabit: (id: string, value?: number, forDate?: string) => Promise<any>
+  undoLog: (id: string, forDate?: string) => Promise<boolean>
+  strictMode?: boolean
   showToast: (message: string, onUndo?: () => void) => void
   updateMilestoneState: (
     habitId: string,
@@ -74,6 +75,7 @@ export function HomeScreen({
   getLogsForHabit,
   logHabit,
   undoLog,
+  strictMode = false,
   showToast,
   updateMilestoneState,
   onEditHabit,
@@ -154,22 +156,33 @@ export function HomeScreen({
     const completedCount = habits.reduce((count, habit) => {
       return count + (isDoneToday(habit, day) ? 1 : 0)
     }, 0)
-    showToast(`${dayLabel}: ${completedCount}/${habits.length} привычек`)
+
+    const diffDays = Math.round((currentDate.getTime() - selected.getTime()) / 86400000)
+    let suffix = ''
+    if (diffDays > 0 && diffDays <= 3 && !strictMode) {
+      suffix = ' · можно отметить'
+    } else if (diffDays > 0 && strictMode) {
+      suffix = ' · 🔒 строгий режим'
+    } else if (diffDays > 3) {
+      suffix = ' · только просмотр'
+    }
+
+    showToast(`${dayLabel}: ${completedCount}/${habits.length} привычек${suffix}`)
   }
 
   const handleDayPress = (habit: Habit, day: string) => {
     const selected = parseKey(day)
     selected.setHours(0, 0, 0, 0)
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
 
     const dayLabel = selected.toLocaleDateString('ru-RU', {
       day: 'numeric',
       month: 'short',
     })
 
-    if (selected.getTime() > today.getTime()) {
+    if (selected.getTime() > now.getTime()) {
       showToast(`${dayLabel}: день ещё не наступил`)
       return
     }
@@ -179,23 +192,38 @@ export function HomeScreen({
   }
 
   const handleTap = async (habit: Habit) => {
-    if (activeDay !== todayKey) {
-      showToast('Это прошлый день. Вернись на сегодня, чтобы отмечать')
-      return
+    const isToday = activeDay === todayKey
+
+    if (!isToday) {
+      if (strictMode) {
+        showToast('🔒 Строгий режим: только сегодня')
+        return
+      }
+
+      const selected = parseKey(activeDay)
+      selected.setHours(0, 0, 0, 0)
+      const now = new Date()
+      now.setHours(0, 0, 0, 0)
+      const diffDays = Math.round((now.getTime() - selected.getTime()) / 86400000)
+
+      if (diffDays > 3) {
+        showToast('Можно отмечать только за последние 3 дня')
+        return
+      }
     }
 
     if (habit.type === 'counter') {
-      const current = getTodayValue(habit.id)
+      const current = getTodayValue(habit.id, activeDay)
       if (current >= habit.goal) return
 
       const next = Math.min(current + 1, habit.goal)
-      const saved = await logHabit(habit.id, 1)
+      const saved = await logHabit(habit.id, 1, isToday ? undefined : activeDay)
       if (!saved) {
         showToast('Не удалось сохранить отметку')
         return
       }
 
-      scheduleMilestoneUpdate(habit)
+      if (isToday) scheduleMilestoneUpdate(habit)
 
       if (next >= habit.goal) {
         triggerHaptic('success')
@@ -210,29 +238,29 @@ export function HomeScreen({
     togglePendingRef.current.add(habit.id)
 
     try {
-      if (isDoneToday(habit)) {
-        const removed = await undoLog(habit.id)
+      if (isDoneToday(habit, activeDay)) {
+        const removed = await undoLog(habit.id, isToday ? undefined : activeDay)
         if (!removed) {
           showToast('Не удалось сохранить отметку')
           return
         }
-        scheduleMilestoneUpdate(habit)
+        if (isToday) scheduleMilestoneUpdate(habit)
         showToast('Отметка снята', () => {
-          void logHabit(habit.id)
+          void logHabit(habit.id, 1, isToday ? undefined : activeDay)
         })
         return
       }
 
-      const created = await logHabit(habit.id)
+      const created = await logHabit(habit.id, 1, isToday ? undefined : activeDay)
       if (!created) {
         showToast('Не удалось сохранить отметку')
         return
       }
 
-      scheduleMilestoneUpdate(habit)
+      if (isToday) scheduleMilestoneUpdate(habit)
       triggerHaptic('success')
       showToast(`${habit.name} отмечена ✓`, () => {
-        void undoLog(habit.id)
+        void undoLog(habit.id, isToday ? undefined : activeDay)
       })
     } finally {
       togglePendingRef.current.delete(habit.id)

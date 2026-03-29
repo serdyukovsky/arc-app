@@ -505,6 +505,7 @@ routerAdd("GET", "/api/arc/notification-settings", function(e) {
       weekly_report: true,
       weekly_report_day: 0,
       streak_protection: true,
+      strict_mode: false,
       last_active: "",
     });
   }
@@ -522,6 +523,7 @@ routerAdd("GET", "/api/arc/notification-settings", function(e) {
     weekly_report: record.getBool("weekly_report"),
     weekly_report_day: record.getInt("weekly_report_day"),
     streak_protection: record.getBool("streak_protection"),
+    strict_mode: record.getBool("strict_mode"),
     last_active: record.getString("last_active"),
   });
 }, $apis.requireAuth("users"));
@@ -539,6 +541,7 @@ routerAdd("POST", "/api/arc/notification-settings", function(e) {
     weekly_report: true,
     weekly_report_day: 0,
     streak_protection: true,
+    strict_mode: false,
   });
   try { e.bindBody(body); } catch(err) {}
 
@@ -568,7 +571,7 @@ routerAdd("POST", "/api/arc/notification-settings", function(e) {
     "morning_digest", "morning_digest_time",
     "evening_summary", "evening_summary_time",
     "weekly_report", "weekly_report_day",
-    "streak_protection"
+    "streak_protection", "strict_mode"
   ];
 
   for (var i = 0; i < fields.length; i++) {
@@ -585,6 +588,7 @@ routerAdd("POST", "/api/arc/notification-settings", function(e) {
   if (body.evening_summary === false) record.set("evening_summary", false);
   if (body.weekly_report === false) record.set("weekly_report", false);
   if (body.streak_protection === false) record.set("streak_protection", false);
+  if (body.strict_mode === false) record.set("strict_mode", false);
 
   try {
     $app.save(record);

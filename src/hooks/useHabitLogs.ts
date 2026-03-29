@@ -318,8 +318,8 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
   )
 
   const undoLog = useCallback(
-    async (habitId: string): Promise<boolean> => {
-      const dateKey = today()
+    async (habitId: string, forDate?: string): Promise<boolean> => {
+      const dateKey = forDate ?? today()
       const existing = logsRef.current.find((l) => l.habit === habitId && l.date === dateKey)
       if (!existing) return false
 

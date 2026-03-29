@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useHabits } from '@/hooks/useHabits'
 import { useHabitLogs } from '@/hooks/useHabitLogs'
 import { useToast } from '@/hooks/useToast'
+import { useNotificationSettings } from '@/hooks/useNotificationSettings'
 import type { Habit } from '@/types'
 import { parseKey } from '@/lib/date'
 import { pbRequest } from '@/lib/pb'
@@ -88,6 +89,7 @@ export default function App() {
     undoLog,
   } = useHabitLogs(token, habitIds, userId)
 
+  const { settings: notifSettings, updateSettings: updateNotifSettings } = useNotificationSettings(token)
   const { toast, showToast, hideToast } = useToast()
 
   const tgUser = telegram.getUser()
@@ -806,6 +808,7 @@ export default function App() {
                 getLogsForHabit={getLogsForHabit}
                 logHabit={logHabit}
                 undoLog={undoLog}
+                strictMode={notifSettings.strictMode}
                 showToast={showToast}
                 updateMilestoneState={updateMilestoneState}
                 onEditHabit={(habit, fromDrawer = false) => {
@@ -838,6 +841,8 @@ export default function App() {
                 user={tgUser}
                 totalHabits={habits.length}
                 bestStreak={bestStreak}
+                strictMode={notifSettings.strictMode}
+                onStrictModeChange={(v) => updateNotifSettings({ strictMode: v })}
                 onOpenNotifications={() => setNotifSettingsOpen(true)}
               />
             )}

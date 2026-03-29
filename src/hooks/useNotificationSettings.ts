@@ -16,6 +16,7 @@ interface SettingsResponse {
   weekly_report: boolean
   weekly_report_day: number
   streak_protection: boolean
+  strict_mode: boolean
   last_active: string
 }
 
@@ -31,6 +32,7 @@ const mapResponse = (data: SettingsResponse): Omit<NotificationSettings, 'id' | 
   weeklyReport: data.weekly_report,
   weeklyReportDay: data.weekly_report_day,
   streakProtection: data.streak_protection,
+  strictMode: data.strict_mode ?? false,
   lastActive: data.last_active,
 })
 
@@ -47,6 +49,7 @@ const mapToPayload = (settings: Partial<NotificationSettings>) => {
   if (settings.weeklyReport !== undefined) payload.weekly_report = settings.weeklyReport
   if (settings.weeklyReportDay !== undefined) payload.weekly_report_day = settings.weeklyReportDay
   if (settings.streakProtection !== undefined) payload.streak_protection = settings.streakProtection
+  if (settings.strictMode !== undefined) payload.strict_mode = settings.strictMode
   return payload
 }
 

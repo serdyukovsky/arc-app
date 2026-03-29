@@ -97,3 +97,41 @@
   background: rgba(0, 0, 0, 0.05);
   color: var(--text-sec);
 }
+
+.settingSub {
+  font-size: 12px;
+  color: var(--text-sec);
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+.strictToggle {
+  margin-left: auto;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: rgba(0, 0, 0, 0.1);
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.strictToggle.strictOn {
+  background: var(--accent, #007aff);
+}
+
+.strictKnob {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.strictOn .strictKnob {
+  transform: translateX(18px);
+}
