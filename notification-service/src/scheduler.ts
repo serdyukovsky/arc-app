@@ -255,18 +255,24 @@ async function processUser(settings: any) {
     }
   }
 
-  // ─── Weekly report ──────────────────────────────────────────────────────
+  // ─── Weekly report (previous full week, Mon–Sun) ────────────────────────
   if (settings.weekly_report) {
-    const reportDay = settings.weekly_report_day ?? 0
+    const reportDay = settings.weekly_report_day ?? 1
     if (dayOfWeek === reportDay && hours === 10 && minutes === 0) {
       const alreadySent = await wasNotificationSent(userId, 'weekly_report', dateKey)
       if (!alreadySent) {
-        // Calculate week stats (last 7 days)
+        // Calculate stats for the previous full Mon–Sun week
+        const todayDate = new Date(dateKey)
+        const sunday = new Date(todayDate)
+        sunday.setDate(todayDate.getDate() - ((dayOfWeek === 0 ? 7 : dayOfWeek)))
+        const monday = new Date(sunday)
+        monday.setDate(sunday.getDate() - 6)
+
         let totalDone = 0
         let totalSlots = 0
         for (let i = 0; i < 7; i++) {
-          const d = new Date(dateKey)
-          d.setDate(d.getDate() - i)
+          const d = new Date(monday)
+          d.setDate(monday.getDate() + i)
           const key = toKey(d)
           for (const h of habits) {
             totalSlots++

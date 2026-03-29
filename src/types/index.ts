@@ -86,7 +86,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS: Omit<NotificationSettings, 'id' | 'u
   eveningSummary: true,
   eveningSummaryTime: '21:00',
   weeklyReport: true,
-  weeklyReportDay: 0,
+  weeklyReportDay: 1,
   streakProtection: true,
   strictMode: false,
   lastActive: '',

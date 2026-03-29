@@ -460,7 +460,7 @@ routerAdd("POST", "/api/arc/heartbeat", function(e) {
     record.set("evening_summary", true);
     record.set("evening_summary_time", "21:00");
     record.set("weekly_report", true);
-    record.set("weekly_report_day", 0);
+    record.set("weekly_report_day", 1);
     record.set("streak_protection", true);
     record.set("last_active", now);
   } else {
@@ -503,7 +503,7 @@ routerAdd("GET", "/api/arc/notification-settings", function(e) {
       evening_summary: true,
       evening_summary_time: "21:00",
       weekly_report: true,
-      weekly_report_day: 0,
+      weekly_report_day: 1,
       streak_protection: true,
       strict_mode: false,
       last_active: "",
