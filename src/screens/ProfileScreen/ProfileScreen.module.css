@@ -117,7 +117,7 @@
 }
 
 .strictToggle.strictOn {
-  background: var(--accent, #007aff);
+  background: #000;
 }
 
 .strictKnob {
