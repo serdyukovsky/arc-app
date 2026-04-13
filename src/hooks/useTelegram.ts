@@ -83,6 +83,7 @@ export function useTelegram() {
     if (!tg) return
     tg.ready()
     tg.expand()
+    tg.requestFullscreen?.()
     tg.setHeaderColor('#efefef')
     tg.setBackgroundColor('#efefef')
     tg.disableVerticalSwipes?.()

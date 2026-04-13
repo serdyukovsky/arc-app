@@ -39,6 +39,14 @@ jobs:
         env:
           VITE_PB_URL: https://gidmate.ru/pb
 
+      - name: Install notification service deps
+        run: npm ci
+        working-directory: notification-service
+
+      - name: Build notification service
+        run: npm run build
+        working-directory: notification-service
+
       - name: Validate deploy secrets
         run: |
           set -eu
@@ -83,6 +91,19 @@ jobs:
             "$DEPLOY_USER@$DEPLOY_HOST:/opt/arc-pocketbase/pb_hooks/arc.pb.js"
           ssh -p "$PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "systemctl restart arc-pocketbase && echo 'PocketBase restarted'"
+
+      - name: Deploy notification service
+        run: |
+          set -eu
+          PORT="${DEPLOY_PORT:-22}"
+          rsync -az --delete \
+            --exclude '.env' \
+            --exclude 'node_modules' \
+            --exclude 'dist' \
+            -e "ssh -p $PORT" \
+            notification-service/ "$DEPLOY_USER@$DEPLOY_HOST:/opt/arc-notifications/"
+          ssh -p "$PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "systemctl restart arc-notifications && echo 'ARC notifications restarted'"
 
       - name: Optional reload command
         run: |

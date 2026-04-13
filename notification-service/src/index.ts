@@ -1,6 +1,7 @@
 import cron from 'node-cron'
 import { authenticate } from './pb-client.js'
 import { tick } from './scheduler.js'
+import { pollBotUpdates } from './telegram.js'
 
 async function main() {
   console.log('[arc-notifications] Starting...')
@@ -24,6 +25,8 @@ async function main() {
 
   // Also run once immediately
   tick().catch((err) => console.error('[arc-notifications] Initial tick error:', err))
+
+  pollBotUpdates().catch((err) => console.error('[arc-notifications] Bot polling error:', err))
 }
 
 main()
