@@ -6,6 +6,7 @@ import { useHabits } from '@/hooks/useHabits'
 import { useHabitLogs } from '@/hooks/useHabitLogs'
 import { useToast } from '@/hooks/useToast'
 import { useNotificationSettings } from '@/hooks/useNotificationSettings'
+import { useOnboarding } from '@/hooks/useOnboarding'
 import type { Habit } from '@/types'
 import { parseKey } from '@/lib/date'
 import { pbRequest } from '@/lib/pb'
@@ -36,6 +37,7 @@ import { ArchiveScreen } from '@/screens/ArchiveScreen/ArchiveScreen'
 import { ProfileScreen } from '@/screens/ProfileScreen/ProfileScreen'
 import { NotificationSettingsScreen } from '@/screens/NotificationSettings/NotificationSettings'
 import { CreateHabit, type CreateHabitData } from '@/screens/CreateHabit/CreateHabit'
+import { Onboarding } from '@/screens/Onboarding/Onboarding'
 import { PopupLayer } from '@/components/PopupLayer/PopupLayer'
 import styles from './App.module.css'
 
@@ -91,6 +93,17 @@ export default function App() {
 
   const { settings: notifSettings, updateSettings: updateNotifSettings } = useNotificationSettings(token)
   const { toast, showToast, hideToast } = useToast()
+  const { isOnboarded, complete: completeOnboarding } = useOnboarding()
+
+  const handleOnboardingComplete = useCallback(
+    async (presetHabits: CreateHabitData[]) => {
+      for (const data of presetHabits) {
+        await createHabit(data)
+      }
+      completeOnboarding()
+    },
+    [createHabit, completeOnboarding]
+  )
 
   const tgUser = telegram.getUser()
   const isHomeHydrated = !habitsLoading && hasSyncedCurrentHabits
@@ -775,6 +788,10 @@ export default function App() {
         <div className={styles.spinner} />
       </div>
     )
+  }
+
+  if (!isOnboarded) {
+    return <Onboarding onComplete={handleOnboardingComplete} />
   }
 
   return (
