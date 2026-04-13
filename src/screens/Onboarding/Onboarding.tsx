@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Category, HabitType, ReminderSlot } from '@/types'
 import { triggerHaptic } from '@/lib/haptics'
@@ -36,11 +36,31 @@ const PRESETS: Preset[] = [
 ]
 
 const TOTAL_STEPS = 5
+const MINUTE_INCREMENT = 5
+const TIME_WHEEL_ITEM_HEIGHT = 52
+const TIME_WHEEL_REPEAT = 3
 
 const stepVariants = {
   initial: { opacity: 0, y: 18 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -12 },
+}
+
+const mod = (value: number, size: number) => ((value % size) + size) % size
+
+const clampTimePart = (value: number, max: number) => mod(value, max)
+
+const formatTime = (hours: number, minutes: number) =>
+  `${String(clampTimePart(hours, 24)).padStart(2, '0')}:${String(clampTimePart(minutes, 60)).padStart(2, '0')}`
+
+const parseTime = (time: string) => {
+  const [hoursRaw = '9', minutesRaw = '0'] = time.split(':')
+  const hours = Number.parseInt(hoursRaw, 10)
+  const minutes = Number.parseInt(minutesRaw, 10)
+  return {
+    hours: Number.isFinite(hours) ? clampTimePart(hours, 24) : 9,
+    minutes: Number.isFinite(minutes) ? clampTimePart(minutes, 60) : 0,
+  }
 }
 
 export function Onboarding({ onComplete }: OnboardingProps) {
@@ -64,10 +84,10 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const togglePreset = useCallback((id: string) => {
     triggerHaptic('light')
     setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
+      const nextValue = new Set(prev)
+      if (nextValue.has(id)) nextValue.delete(id)
+      else nextValue.add(id)
+      return nextValue
     })
   }, [])
 
@@ -100,13 +120,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   return (
     <div className={styles.root}>
       <div className={styles.header}>
-        <button
-          type="button"
-          className={styles.backBtn}
-          onClick={back}
-          disabled={step === 0}
-          aria-label="Назад"
-        >
+        <button type="button" className={styles.backBtn} onClick={back} disabled={step === 0} aria-label="Назад">
           <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
             arrow_back
           </span>
@@ -116,19 +130,12 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
             <div
               key={i}
-              className={`${styles.dot} ${i === step ? styles.dotActive : ''} ${
-                i < step ? styles.dotPast : ''
-              }`}
+              className={`${styles.dot} ${i === step ? styles.dotActive : ''} ${i < step ? styles.dotPast : ''}`}
             />
           ))}
         </div>
 
-        <button
-          type="button"
-          className={styles.skipBtn}
-          onClick={finish}
-          disabled={submitting}
-        >
+        <button type="button" className={styles.skipBtn} onClick={finish} disabled={submitting}>
           Пропустить
         </button>
       </div>
@@ -146,12 +153,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           >
             {step === 0 && <WelcomeStep />}
             {step === 1 && <TapDemoStep />}
-            {step === 2 && (
-              <LongPressDemoStep onSheetChange={setLongPressSheetOpen} />
-            )}
-            {step === 3 && (
-              <PresetsStep selected={selected} onToggle={togglePreset} />
-            )}
+            {step === 2 && <LongPressDemoStep onSheetChange={setLongPressSheetOpen} />}
+            {step === 3 && <PresetsStep selected={selected} onToggle={togglePreset} />}
             {step === 4 && (
               <ReminderStep
                 enabled={reminderEnabled}
@@ -166,30 +169,15 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
       <div className={styles.footer}>
         {isFinalStep ? (
-          <button
-            type="button"
-            className={styles.primaryBtn}
-            onClick={finish}
-            disabled={submitting}
-          >
+          <button type="button" className={styles.primaryBtn} onClick={finish} disabled={submitting}>
             {submitting ? 'Запускаем…' : 'Поехали'}
           </button>
         ) : step === 3 ? (
-          <button
-            type="button"
-            className={styles.primaryBtn}
-            onClick={next}
-            disabled={!canGoNext}
-          >
+          <button type="button" className={styles.primaryBtn} onClick={next} disabled={!canGoNext}>
             {selected.size > 0 ? `Далее · ${selected.size}` : 'Выбери привычку'}
           </button>
         ) : (
-          <button
-            type="button"
-            className={styles.circleBtn}
-            onClick={next}
-            aria-label="Далее"
-          >
+          <button type="button" className={styles.circleBtn} onClick={next} aria-label="Далее">
             <span className="material-symbols-outlined" style={{ fontSize: 24 }}>
               arrow_forward
             </span>
@@ -197,16 +185,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         )}
       </div>
 
-      {step === 2 && (
-        <p className={styles.demoSubOverlay}>
-          Стрик, рекорд, % выполнения — по каждой привычке.
-        </p>
-      )}
+      {step === 2 && <p className={styles.demoSubOverlay}>Стрик, рекорд, % выполнения — по каждой привычке.</p>}
 
-      <div
-        className={`${styles.miniSheet} ${longPressSheetOpen ? styles.miniSheetOpen : ''}`}
-        aria-hidden
-      >
+      <div className={`${styles.miniSheet} ${longPressSheetOpen ? styles.miniSheetOpen : ''}`} aria-hidden>
         <div className={styles.miniSheetHandle} />
         <div className={styles.miniSheetRow}>
           <div className={styles.miniSheetCell}>
@@ -235,9 +216,7 @@ function WelcomeStep() {
         <br />
         Один тап.
       </h1>
-      <p className={styles.heroSub}>
-        Никаких сложных настроек. Только ты и твой стрик.
-      </p>
+      <p className={styles.heroSub}>Никаких сложных настроек. Только ты и твой стрик.</p>
     </div>
   )
 }
@@ -248,14 +227,13 @@ function TapDemoStep() {
       <div className={styles.demoTextTop}>
         <div className={styles.eyebrow}>Шаг 1</div>
         <h2 className={styles.demoTitle}>
-          Один тап —<br />
+          Один тап —
+          <br />
           привычка сделана
         </h2>
       </div>
       <DemoCard mode="tap" />
-      <p className={styles.demoSub}>
-        Тапни по карточке. Стрик растёт сам.
-      </p>
+      <p className={styles.demoSub}>Тапни по карточке. Стрик растёт сам.</p>
     </div>
   )
 }
@@ -266,7 +244,8 @@ function LongPressDemoStep({ onSheetChange }: { onSheetChange: (open: boolean) =
       <div className={styles.demoTextTop}>
         <div className={styles.eyebrow}>Шаг 2</div>
         <h2 className={styles.demoTitle}>
-          Зажми —<br />
+          Зажми —
+          <br />
           увидишь аналитику
         </h2>
       </div>
@@ -285,29 +264,25 @@ function PresetsStep({ selected, onToggle }: PresetsStepProps) {
     <div className={styles.presetsPane}>
       <div className={styles.eyebrow}>Шаг 3</div>
       <h2 className={styles.sectionTitle}>
-        С чего<br />
+        С чего
+        <br />
         начнём?
       </h2>
-      <p className={styles.sectionSub}>
-        Выбери привычки, которые хочешь тренировать.
-      </p>
+      <p className={styles.sectionSub}>Выбери привычки, которые хочешь тренировать.</p>
       <div className={styles.presetGrid}>
-        {PRESETS.map((p) => {
-          const isSelected = selected.has(p.id)
+        {PRESETS.map((preset) => {
+          const isSelected = selected.has(preset.id)
           return (
             <button
-              key={p.id}
+              key={preset.id}
               type="button"
               className={`${styles.presetItem} ${isSelected ? styles.presetItemActive : ''}`}
-              onClick={() => onToggle(p.id)}
+              onClick={() => onToggle(preset.id)}
             >
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: 26 }}
-              >
-                {p.icon}
+              <span className="material-symbols-outlined" style={{ fontSize: 26 }}>
+                {preset.icon}
               </span>
-              <span className={styles.presetLabel}>{p.name}</span>
+              <span className={styles.presetLabel}>{preset.name}</span>
             </button>
           )
         })}
@@ -323,55 +298,125 @@ interface ReminderStepProps {
   onTimeChange: (v: string) => void
 }
 
-function ReminderStep({ enabled, time, onEnabledChange, onTimeChange }: ReminderStepProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
+interface TimeWheelColumnProps {
+  disabled: boolean
+  values: number[]
+  current: number
+  format: (value: number) => string
+  onChange: (value: number) => void
+}
 
-  const openPicker = () => {
-    if (!enabled) return
-    const el = inputRef.current
+function TimeWheelColumn({ disabled, values, current, format, onChange }: TimeWheelColumnProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const timeoutRef = useRef<number | null>(null)
+  const repeatedValues = useMemo(
+    () => Array.from({ length: TIME_WHEEL_REPEAT }, () => values).flat(),
+    [values]
+  )
+  const currentIndex = Math.max(0, values.indexOf(current))
+  const middleIndex = values.length + currentIndex
+
+  useEffect(() => {
+    const el = containerRef.current
     if (!el) return
-    triggerHaptic('light')
-    const anyEl = el as HTMLInputElement & { showPicker?: () => void }
-    if (typeof anyEl.showPicker === 'function') {
-      anyEl.showPicker()
-    } else {
-      el.focus()
-      el.click()
+    el.scrollTop = middleIndex * TIME_WHEEL_ITEM_HEIGHT
+  }, [middleIndex])
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
     }
+  }, [])
+
+  const syncSelection = (scrollTop: number) => {
+    const rawIndex = Math.round(scrollTop / TIME_WHEEL_ITEM_HEIGHT)
+    const normalizedIndex = mod(rawIndex, values.length)
+    const nextValue = values[normalizedIndex]
+    if (nextValue !== current) {
+      onChange(nextValue)
+      triggerHaptic('light')
+    }
+    return normalizedIndex
   }
 
-  const [hh, mm] = time.split(':')
+  const handleScroll = () => {
+    const el = containerRef.current
+    if (!el || disabled) return
+    syncSelection(el.scrollTop)
+    if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current)
+    timeoutRef.current = window.setTimeout(() => {
+      const settledIndex = syncSelection(el.scrollTop)
+      const recenteredIndex = values.length + settledIndex
+      el.scrollTo({
+        top: recenteredIndex * TIME_WHEEL_ITEM_HEIGHT,
+        behavior: 'smooth',
+      })
+    }, 90)
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className={`${styles.timeWheelColumn} ${disabled ? styles.timeWheelColumnDisabled : ''}`}
+      onScroll={handleScroll}
+      role="spinbutton"
+      aria-valuemin={Math.min(...values)}
+      aria-valuemax={Math.max(...values)}
+      aria-valuenow={current}
+      aria-valuetext={format(current)}
+      tabIndex={disabled ? -1 : 0}
+    >
+      <div className={styles.timeWheelSpacer} />
+      {repeatedValues.map((value, index) => {
+        const isActive = index === middleIndex
+        return (
+          <div
+            key={`${value}-${index}`}
+            className={`${styles.timeWheelItem} ${isActive ? styles.timeWheelItemActive : ''}`}
+          >
+            {format(value)}
+          </div>
+        )
+      })}
+      <div className={styles.timeWheelSpacer} />
+    </div>
+  )
+}
+
+function ReminderStep({ enabled, time, onEnabledChange, onTimeChange }: ReminderStepProps) {
+  const { hours, minutes } = parseTime(time)
+  const minuteValues = Array.from({ length: 12 }, (_, index) => index * MINUTE_INCREMENT)
 
   return (
     <div className={styles.reminderPane}>
       <div className={styles.eyebrow}>Шаг 4</div>
       <h2 className={styles.sectionTitle}>
-        Когда<br />
+        Когда
+        <br />
         напомнить?
       </h2>
-      <p className={styles.sectionSub}>
-        Одно мягкое напоминание в день. Без спама.
-      </p>
+      <p className={styles.sectionSub}>Одно мягкое напоминание в день. Без спама.</p>
 
-      <button
-        type="button"
-        className={`${styles.timeDisplay} ${!enabled ? styles.timeDisplayOff : ''}`}
-        onClick={openPicker}
-        disabled={!enabled}
-      >
-        <span className={styles.timeDigits}>{hh}</span>
-        <span className={styles.timeColon}>:</span>
-        <span className={styles.timeDigits}>{mm}</span>
-        <input
-          ref={inputRef}
-          type="time"
-          className={styles.timeInputHidden}
-          value={time}
-          onChange={(e) => onTimeChange(e.target.value || time)}
-          tabIndex={-1}
-          aria-hidden
-        />
-      </button>
+      <div className={`${styles.timeDisplay} ${!enabled ? styles.timeDisplayOff : ''}`}>
+        <div className={styles.timeWheelHint}>Потяни вверх или вниз</div>
+        <div className={styles.timeWheelRow}>
+          <TimeWheelColumn
+            disabled={!enabled}
+            values={Array.from({ length: 24 }, (_, index) => index)}
+            current={hours}
+            format={(value) => String(value).padStart(2, '0')}
+            onChange={(nextHours) => onTimeChange(formatTime(nextHours, minutes))}
+          />
+          <span className={styles.timeColon}>:</span>
+          <TimeWheelColumn
+            disabled={!enabled}
+            values={minuteValues}
+            current={minuteValues.includes(minutes) ? minutes : minuteValues[Math.round(minutes / MINUTE_INCREMENT) % minuteValues.length]}
+            format={(value) => String(value).padStart(2, '0')}
+            onChange={(nextMinutes) => onTimeChange(formatTime(hours, nextMinutes))}
+          />
+        </div>
+      </div>
 
       <button
         type="button"
