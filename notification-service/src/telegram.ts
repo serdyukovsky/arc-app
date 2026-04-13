@@ -26,7 +26,7 @@ interface TelegramUpdate {
 }
 
 const START_TEXT =
-  'COIL помогает держать привычки в ритме.\n\nОткрой приложение кнопкой ниже и начни отмечать прогресс.'
+  'Трекер привычек помогает держать ритм и не терять стрик.\n\nОткрой приложение кнопкой ниже и начни отмечать прогресс.'
 
 async function apiCall<T>(method: string, body?: unknown): Promise<T | null> {
   if (!BOT_TOKEN) return null
@@ -85,7 +85,7 @@ export async function sendMessage(
   const {
     parseMode = 'HTML',
     withAppButton = true,
-    buttonText = 'Открыть COIL',
+    buttonText = 'Открыть приложение',
     persistentAppKeyboard = false,
   } = options
 
@@ -105,7 +105,7 @@ export async function sendMessage(
   return result?.message_id ? String(result.message_id) : null
 }
 
-export async function setChatMenuButton(chatId: string, buttonText: string = 'Открыть COIL'): Promise<void> {
+export async function setChatMenuButton(chatId: string, buttonText: string = 'Открыть приложение'): Promise<void> {
   if (!WEBAPP_URL) return
 
   await apiCall('setChatMenuButton', {
@@ -132,7 +132,7 @@ async function handleStart(chatId: string): Promise<void> {
   await sendMessage(chatId, START_TEXT, {
     parseMode: 'HTML',
     withAppButton: true,
-    buttonText: 'Открыть COIL',
+    buttonText: 'Открыть приложение',
     persistentAppKeyboard: true,
   })
 }
