@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-const KEY = 'coil.onboarding.completed.v1'
+const KEY = 'coil.onboarding.completed.v2'
 
 const read = (): boolean => {
   if (typeof window === 'undefined') return true
