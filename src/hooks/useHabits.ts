@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import type { Habit } from '@/types'
 import { pbRequest } from '@/lib/pb'
 import { buildMilestones, getCurrentMilestoneIndex } from '@/lib/milestones'
@@ -261,6 +261,13 @@ const normalizeOrder = (items: Habit[]): Habit[] =>
 export function useHabits(token: string | null, userId: string | null) {
   const [habits, setHabits] = useState<Habit[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  // createHabit runs in an await-loop during onboarding, where a closure over
+  // `habits` is a render behind and hands every habit the same order.
+  const habitsRef = useRef<Habit[]>([])
+
+  useEffect(() => {
+    habitsRef.current = habits
+  }, [habits])
 
   const fetchHabits = useCallback(async () => {
     if (!token) {
@@ -325,9 +332,12 @@ export function useHabits(token: string | null, userId: string | null) {
           reminderTime: data.reminderTime,
           created: new Date().toISOString(),
           isArchived: false,
-          order: habits.length,
+          order: habitsRef.current.length,
         })
 
+        // synchronously, because React runs the updater below at render time —
+        // too late for the next iteration of an await-loop to see it
+        habitsRef.current = normalizeOrder([...habitsRef.current, newHabit])
         setHabits((prev) => {
           const next = normalizeOrder([...prev, newHabit])
           saveDevHabits(next)
@@ -350,18 +360,19 @@ export function useHabits(token: string | null, userId: string | null) {
           reminder_time: data.reminderTime || null,
           user: userId,
           isArchived: false,
-          order: habits.length,
+          order: habitsRef.current.length,
         },
       })
 
       if (res.ok && res.data) {
         const normalized = normalizeHabit(res.data)
+        habitsRef.current = normalizeOrder([...habitsRef.current, normalized])
         setHabits((prev) => normalizeOrder([...prev, normalized]))
         return normalized
       }
       return null
     },
-    [token, userId, habits.length]
+    [token, userId]
   )
 
   const updateHabit = useCallback(

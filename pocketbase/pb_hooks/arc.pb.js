@@ -438,7 +438,7 @@ routerAdd("POST", "/api/arc/heartbeat", function(e) {
     var results = $app.findRecordsByFilter(
       "notification_settings",
       "user = {:userId}",
-      "-created",
+      "id",
       1,
       0,
       { userId: userId }
@@ -484,7 +484,7 @@ routerAdd("GET", "/api/arc/notification-settings", function(e) {
     var results = $app.findRecordsByFilter(
       "notification_settings",
       "user = {:userId}",
-      "-created",
+      "id",
       1,
       0,
       { userId: userId }
@@ -552,7 +552,7 @@ routerAdd("POST", "/api/arc/notification-settings", function(e) {
     var results = $app.findRecordsByFilter(
       "notification_settings",
       "user = {:userId}",
-      "-created",
+      "id",
       1,
       0,
       { userId: userId }

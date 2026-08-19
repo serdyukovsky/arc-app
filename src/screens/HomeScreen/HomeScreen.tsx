@@ -324,7 +324,17 @@ export function HomeScreen({
 
   const refDate = parseKey(activeDay)
   refDate.setHours(0, 0, 0, 0)
-  const createdDate = toValidDate(drawerHabit?.created)
+  const drawerFirstLogDate = drawerHabit
+    ? getLogsForHabit(drawerHabit.id).reduce<string | null>(
+        (earliest, log) => (earliest === null || log.date < earliest ? log.date : earliest),
+        null
+      )
+    : null
+  const createdDate = drawerHabit?.created
+    ? toValidDate(drawerHabit.created)
+    : drawerFirstLogDate
+      ? parseKey(drawerFirstLogDate)
+      : new Date()
   createdDate.setHours(0, 0, 0, 0)
   const diffMs = refDate.getTime() - createdDate.getTime()
   const safeDaysDiff = Number.isFinite(diffMs) ? Math.floor(diffMs / 86400000) : 0

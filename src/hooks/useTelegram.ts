@@ -77,16 +77,27 @@ function applySafeAreaCssVars(): void {
   root.style.setProperty('--tg-top-controls-js', `${topControlsInset}px`)
 }
 
+// Telegram's SDK defines every method regardless of the client version and
+// throws `WebAppMethodUnsupported` at call time on older clients, so optional
+// chaining is not enough — an unguarded call kills the whole React tree.
+const safeCall = (fn: () => void): void => {
+  try {
+    fn()
+  } catch {
+    // method not supported by this Telegram client version
+  }
+}
+
 export function useTelegram() {
   useEffect(() => {
     const tg = getTg()
     if (!tg) return
-    tg.ready()
-    tg.expand()
-    tg.requestFullscreen?.()
-    tg.setHeaderColor('#efefef')
-    tg.setBackgroundColor('#efefef')
-    tg.disableVerticalSwipes?.()
+    safeCall(() => tg.ready())
+    safeCall(() => tg.expand())
+    safeCall(() => tg.requestFullscreen?.())
+    safeCall(() => tg.setHeaderColor('#efefef'))
+    safeCall(() => tg.setBackgroundColor('#efefef'))
+    safeCall(() => tg.disableVerticalSwipes?.())
   }, [])
 
   const bindSafeAreaCssVars = () => {
@@ -131,11 +142,11 @@ export function useTelegram() {
   const showBackButton = (onClick: () => void) => {
     const tg = getTg()
     if (!tg?.BackButton) return () => {}
-    tg.BackButton.show()
-    tg.BackButton.onClick(onClick)
+    safeCall(() => tg.BackButton.show())
+    safeCall(() => tg.BackButton.onClick(onClick))
     return () => {
-      tg.BackButton.hide()
-      tg.BackButton.offClick(onClick)
+      safeCall(() => tg.BackButton.hide())
+      safeCall(() => tg.BackButton.offClick(onClick))
     }
   }
 

@@ -213,7 +213,10 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
       dates.push(parseKey(log.date))
     })
     habits.forEach((habit) => {
-      dates.push(floorDate(new Date(habit.created)))
+      // habits records carry no `created` field, so this is often invalid —
+      // one NaN here made Math.min NaN and the whole loop below never ran
+      const created = new Date(habit.created)
+      if (!Number.isNaN(created.getTime())) dates.push(floorDate(created))
     })
 
     const minDate = new Date(Math.min(...dates.map((d) => d.getTime())))

@@ -31,14 +31,39 @@ export async function pbRequest<T = any>(
   }
 }
 
-export async function authWithTelegram(initData: string): Promise<PBAuth | null> {
-  if (!PB_URL || !initData) return null
+export type AuthFailure =
+  | { reason: 'no-init-data' }
+  | { reason: 'offline' }
+  | { reason: 'rejected'; status: number; message: string }
+
+export interface AuthResult {
+  auth: PBAuth | null
+  failure: AuthFailure | null
+}
+
+export async function authWithTelegram(initData: string): Promise<AuthResult> {
+  if (!PB_URL) return { auth: null, failure: null }
+  if (!initData) return { auth: null, failure: { reason: 'no-init-data' } }
+
   const res = await pbRequest<any>('/api/arc/telegram-auth', {
     method: 'POST',
     body: { initData },
   })
-  if (!res.ok || !res.data?.token || !res.data?.record?.id) return null
-  return { token: res.data.token, record: res.data.record }
+
+  if (res.status === 0) return { auth: null, failure: { reason: 'offline' } }
+
+  if (!res.ok || !res.data?.token || !res.data?.record?.id) {
+    return {
+      auth: null,
+      failure: {
+        reason: 'rejected',
+        status: res.status,
+        message: String(res.data?.message ?? ''),
+      },
+    }
+  }
+
+  return { auth: { token: res.data.token, record: res.data.record }, failure: null }
 }
 
 export function getSavedAuth(): PBAuth | null {

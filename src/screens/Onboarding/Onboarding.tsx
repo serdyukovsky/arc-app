@@ -7,7 +7,8 @@ import { BASE_STREAK, DemoCard } from './DemoCard'
 import styles from './Onboarding.module.css'
 
 interface OnboardingProps {
-  onComplete: (habits: CreateHabitData[]) => Promise<void> | void
+  // resolves false when nothing could be saved, so the step stays usable
+  onComplete: (habits: CreateHabitData[]) => Promise<boolean>
 }
 
 interface Preset {
@@ -107,7 +108,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       ...(reminderSlot === 'custom' ? { reminderTime } : {}),
     }))
 
-    await onComplete(habits)
+    const completed = await onComplete(habits)
+    if (!completed) setSubmitting(false)
   }, [submitting, reminderEnabled, reminderTime, selected, onComplete])
 
   const canGoNext = useMemo(() => {
