@@ -162,7 +162,7 @@ export function useHabitLogs(token: string | null, habitIds: string[], userId: s
       if (!token) return null
       const filter = `habit = "${habitId}" && date = "${dateKey}"`
       const res = await pbRequest<{ items: HabitLog[] }>(
-        `/api/collections/habit_logs/records?filter=${encodeURIComponent(filter)}&perPage=1&sort=-created`,
+        `/api/collections/habit_logs/records?filter=${encodeURIComponent(filter)}&perPage=1`,
         { token }
       )
       if (!res.ok || !res.data?.items?.[0]) return null

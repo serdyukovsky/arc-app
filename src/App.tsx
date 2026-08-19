@@ -9,6 +9,7 @@ import { useNotificationSettings } from '@/hooks/useNotificationSettings'
 import { useOnboarding } from '@/hooks/useOnboarding'
 import type { Habit } from '@/types'
 import { parseKey } from '@/lib/date'
+import type { AuthFailure } from '@/lib/pb'
 import { pbRequest } from '@/lib/pb'
 import { buildMilestones, getCurrentMilestoneIndex, getMilestoneValueByIndex } from '@/lib/milestones'
 import {
@@ -47,6 +48,17 @@ const screenTransition = {
   exit: { opacity: 0, y: -8, scale: 0.998 },
 }
 
+const describeAuthFailure = (failure: AuthFailure): string => {
+  if (failure.reason === 'no-init-data') {
+    return 'Telegram не передал данные входа — открой приложение через бота'
+  }
+  if (failure.reason === 'offline') {
+    return 'Нет связи с сервером — изменения не сохранятся'
+  }
+  const detail = failure.message ? `: ${failure.message}` : ''
+  return `Сервер отклонил вход (${failure.status})${detail} — изменения не сохранятся`
+}
+
 const areMilestonesEqual = (a: number[] | null, b: number[] | null): boolean => {
   if (a === b) return true
   if (!a || !b) return false
@@ -64,7 +76,7 @@ export default function App() {
   const [notifSettingsOpen, setNotifSettingsOpen] = useState(false)
 
   const telegram = useTelegram()
-  const { token, userId, isLoading: authLoading } = useAuth(telegram.getInitData)
+  const { token, userId, isLoading: authLoading, failure: authFailure } = useAuth(telegram.getInitData)
   const {
     activeHabits,
     archivedHabits,
@@ -96,13 +108,32 @@ export default function App() {
   const { isOnboarded, complete: completeOnboarding } = useOnboarding()
 
   const handleOnboardingComplete = useCallback(
-    async (presetHabits: CreateHabitData[]) => {
+    async (presetHabits: CreateHabitData[]): Promise<boolean> => {
+      let createdCount = 0
       for (const data of presetHabits) {
-        await createHabit(data)
+        const created = await createHabit(data)
+        if (created) createdCount += 1
       }
+
+      if (presetHabits.length > 0 && createdCount === 0) {
+        showToast(
+          authFailure
+            ? describeAuthFailure(authFailure)
+            : 'Не удалось сохранить привычки — попробуй ещё раз',
+          undefined,
+          6000
+        )
+        return false
+      }
+
+      if (createdCount < presetHabits.length) {
+        showToast(`Сохранено ${createdCount} из ${presetHabits.length} — остальные не записались`, undefined, 6000)
+      }
+
       completeOnboarding()
+      return true
     },
-    [createHabit, completeOnboarding]
+    [createHabit, completeOnboarding, showToast, authFailure]
   )
 
   const tgUser = telegram.getUser()
@@ -119,6 +150,13 @@ export default function App() {
     const cleanup = telegram.bindSafeAreaCssVars()
     return cleanup
   }, [])
+
+  // Without this the app just goes quiet: every write becomes a no-op and the
+  // user is left pressing buttons that do nothing.
+  useEffect(() => {
+    if (!authFailure) return
+    showToast(describeAuthFailure(authFailure), undefined, 6000)
+  }, [authFailure, showToast])
 
   // Heartbeat: send timezone + last_active to backend
   useEffect(() => {
@@ -791,7 +829,12 @@ export default function App() {
   }
 
   if (!isOnboarded) {
-    return <Onboarding onComplete={handleOnboardingComplete} />
+    return (
+      <>
+        <Onboarding onComplete={handleOnboardingComplete} />
+        <Toast toast={toast} onHide={hideToast} />
+      </>
+    )
   }
 
   return (

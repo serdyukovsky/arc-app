@@ -151,6 +151,7 @@ export function CreateHabit({
         onClose({ reopenDrawer: false })
         return
       }
+      showToast('Не удалось сохранить изменения — проверь связь')
     } else {
       const created = await onCreate(payload)
       if (created) {
@@ -158,6 +159,7 @@ export function CreateHabit({
         onClose({ reopenDrawer: false })
         return
       }
+      showToast('Не удалось создать привычку — проверь связь')
     }
 
     submitLockRef.current = false

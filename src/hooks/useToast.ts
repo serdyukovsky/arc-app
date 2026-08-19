@@ -9,12 +9,12 @@ export function useToast() {
   const [toast, setToast] = useState<ToastData | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const showToast = useCallback((message: string, onUndo?: () => void) => {
+  const showToast = useCallback((message: string, onUndo?: () => void, durationMs = 3000) => {
     if (timerRef.current) clearTimeout(timerRef.current)
     setToast({ message, onUndo })
     timerRef.current = setTimeout(() => {
       setToast(null)
-    }, 3000)
+    }, durationMs)
   }, [])
 
   const hideToast = useCallback(() => {
