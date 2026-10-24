@@ -80,3 +80,13 @@ export interface Note {
   text: string
   created: string
 }
+
+export interface Task {
+  id: string
+  user: string
+  title: string
+  done: boolean
+  done_at?: string
+  order?: number
+  created: string
+}

@@ -6,7 +6,7 @@
 // Google с сервера доступен напрямую, прокси не нужен.
 import { createSign } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import type { Habit, HabitLog, Note } from './types.js'
+import type { Habit, HabitLog, Note, Task } from './types.js'
 
 const SHEET_ID = (process.env.SHEET_ID || '').trim()
 const CREDENTIALS = process.env.GOOGLE_CREDENTIALS || '/opt/arc-notifications/secrets/google.json'
@@ -15,6 +15,8 @@ const API = 'https://sheets.googleapis.com/v4/spreadsheets'
 export const HABITS_SHEET = 'Привычки'
 export const LOGS_SHEET = 'Отметки'
 export const NOTES_SHEET = 'Мысли'
+export const TASKS_SHEET = 'Задачи'
+const TASKS_HEAD = ['Создана', 'Задача', 'Сделано', 'Когда сделано']
 const NOTES_HEAD = ['Дата', 'Время', 'Мысль']
 const HABITS_HEAD = ['Привычка', 'Тип', 'Цель', 'Напоминание', 'В архиве']
 const LOGS_HEAD = ['Дата', 'Привычка', 'Значение', 'Время отметки']
@@ -63,6 +65,20 @@ export function noteRows(notes: Note[], timezone: string): string[][] {
   return [...notes]
     .sort((a, b) => a.created.localeCompare(b.created))
     .map((n) => [day(n.created), localTime(n.created, timezone), asText(n.text)])
+}
+
+export function taskRows(tasks: Task[], timezone: string): string[][] {
+  const day = (iso: string) =>
+    new Intl.DateTimeFormat('sv-SE', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' })
+      .format(new Date(iso.replace(' ', 'T')))
+  return [...tasks]
+    .sort((a, b) => a.created.localeCompare(b.created))
+    .map((t) => [
+      day(t.created),
+      asText(t.title),
+      t.done ? 'да' : '',
+      t.done && t.done_at ? `${day(t.done_at)} ${localTime(t.done_at, timezone)}` : '',
+    ])
 }
 
 // ─── Google ─────────────────────────────────────────────────────────────────
@@ -155,15 +171,17 @@ let last = ''
 export async function exportToSheet(
   habitValues: string[][],
   logValues: string[][],
-  noteValues: string[][] | null = null
+  noteValues: string[][] | null = null,
+  taskValues: string[][] | null = null
 ): Promise<boolean> {
   if (!SHEET_ID) return false
-  const snapshot = JSON.stringify([habitValues, logValues, noteValues])
+  const snapshot = JSON.stringify([habitValues, logValues, noteValues, taskValues])
   if (snapshot === last) return false
   const ids = await sheetIds()
   await writeSheet(ids, HABITS_SHEET, [HABITS_HEAD, ...habitValues])
   await writeSheet(ids, LOGS_SHEET, [LOGS_HEAD, ...logValues])
   if (noteValues) await writeSheet(ids, NOTES_SHEET, [NOTES_HEAD, ...noteValues])
+  if (taskValues) await writeSheet(ids, TASKS_SHEET, [TASKS_HEAD, ...taskValues])
   last = snapshot
   return true
 }

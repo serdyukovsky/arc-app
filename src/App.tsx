@@ -35,6 +35,8 @@ import { HomeScreen } from '@/screens/HomeScreen/HomeScreen'
 import { AnalyticsScreen } from '@/screens/AnalyticsScreen/AnalyticsScreen'
 import { ArchiveScreen } from '@/screens/ArchiveScreen/ArchiveScreen'
 import { ProfileScreen } from '@/screens/ProfileScreen/ProfileScreen'
+import { TasksScreen } from '@/screens/TasksScreen/TasksScreen'
+import { useTasks } from '@/hooks/useTasks'
 import { NotificationSettingsScreen } from '@/screens/NotificationSettings/NotificationSettings'
 import { CreateHabit, type CreateHabitData } from '@/screens/CreateHabit/CreateHabit'
 import { Onboarding } from '@/screens/Onboarding/Onboarding'
@@ -66,6 +68,7 @@ export default function App() {
 
   const telegram = useTelegram()
   const { token, userId, isLoading: authLoading } = useAuth(telegram.getInitData)
+  const { tasks, addTask, toggleTask, renameTask, deleteTask } = useTasks(token, userId)
   const {
     activeHabits,
     archivedHabits,
@@ -830,6 +833,18 @@ export default function App() {
                 getStreak={getHabitStreak}
                 getBestStreak={getHabitBestStreak}
                 onClose={() => navigateTo('home')}
+              />
+            )}
+            {screen === 'tasks' && (
+              <TasksScreen
+                tasks={tasks}
+                onAdd={addTask}
+                onToggle={toggleTask}
+                onRename={renameTask}
+                onDelete={(id) => {
+                  void deleteTask(id)
+                  showToast('Задача удалена')
+                }}
               />
             )}
             {screen === 'profile' && (

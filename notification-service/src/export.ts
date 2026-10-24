@@ -2,8 +2,8 @@
 // Частые вызовы склеиваются: идёт одна выгрузка, за ней — максимум одна догоняющая.
 import { reminderTime } from './blocks.js'
 import { EXPORT_NOTES } from './config.js'
-import { getAllHabitsForUser, getLogsForUser, getNotes } from './pb-client.js'
-import { exportToSheet, habitRows, logRows, noteRows, sheetsEnabled } from './sheets.js'
+import { getAllHabitsForUser, getLogsForUser, getNotes, getTasks } from './pb-client.js'
+import { exportToSheet, habitRows, logRows, noteRows, sheetsEnabled, taskRows } from './sheets.js'
 
 let running = false
 let again = false
@@ -21,7 +21,8 @@ export async function syncSheet(userId: string, timezone: string): Promise<void>
       const habits = await getAllHabitsForUser(userId)
       const logs = await getLogsForUser(userId, 3650)
       const notes = EXPORT_NOTES ? noteRows(await getNotes(), timezone) : null
-      if (await exportToSheet(habitRows(habits, reminderTime), logRows(logs, habits, timezone), notes)) {
+      const tasks = taskRows(await getTasks(userId), timezone)
+      if (await exportToSheet(habitRows(habits, reminderTime), logRows(logs, habits, timezone), notes, tasks)) {
         console.log('[sheets] exported', logs.length, 'logs')
       }
     } while (again)

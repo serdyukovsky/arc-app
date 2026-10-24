@@ -4,7 +4,7 @@
 //
 // callback_data: `<вид>:<habitId>:<YYYY-MM-DD>` — дата едет в кнопке, чтобы утреннее нажатие
 // по вчерашнему сообщению легло во вчера. Вид: `h` — сообщение-блок, `y` — утреннее «Вчера».
-import type { Habit } from './types.js'
+import type { Habit, Task } from './types.js'
 
 const DONE = '✅'
 const TODO = '▫️'
@@ -94,4 +94,30 @@ export function isMarkable(dateKey: string, todayKey: string, backfillDays: numb
   const [y, m, d] = todayKey.split('-').map(Number)
   const first = new Date(Date.UTC(y, m - 1, d - backfillDays)).toISOString().slice(0, 10)
   return dateKey >= first
+}
+
+// ─── задачи ─────────────────────────────────────────────────────────────────
+// callback_data: `t:<taskId>:<где>` — где: `l` (список /задачи) или дата утреннего «Вчера».
+
+/** Открытые — сверху (в порядке добавления), сделанные за последние сутки — ниже (чтобы можно было вернуть). */
+export function visibleTasks(tasks: Task[], now: Date): Task[] {
+  const dayAgo = now.getTime() - 24 * 3600 * 1000
+  const open = tasks.filter((t) => !t.done).sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.created.localeCompare(b.created))
+  const recent = tasks
+    .filter((t) => t.done && t.done_at && new Date(t.done_at).getTime() >= dayAgo)
+    .sort((a, b) => (a.done_at || '').localeCompare(b.done_at || ''))
+  return [...open, ...recent]
+}
+
+export function tasksLines(tasks: Task[]): string[] {
+  return tasks.map((t) => `${t.done ? DONE : TODO} ${escapeHtml(t.title)}`)
+}
+
+export function taskButtons(tasks: Task[], where: string): InlineButton[][] {
+  return tasks.map((t) => [{ text: t.done ? `${DONE} ${t.title}` : t.title, callback_data: `t:${t.id}:${where}` }])
+}
+
+export function parseTaskCallback(data: string | undefined): { taskId: string; where: string } | null {
+  const m = /^t:([a-z0-9]{1,32}):(l|\d{4}-\d{2}-\d{2})$/.exec(data || '')
+  return m ? { taskId: m[1], where: m[2] } : null
 }

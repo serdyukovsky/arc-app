@@ -9,8 +9,13 @@ import {
   isMarkable,
   isTappable,
   parseCallback,
+  parseTaskCallback,
   reminderTime,
+  taskButtons,
+  tasksLines,
+  visibleTasks,
   yesterdayText,
+  type InlineButton,
 } from './blocks.js'
 import { getLocalTime } from './date.js'
 import { syncSheet } from './export.js'
@@ -18,6 +23,7 @@ import { pickClosing } from './phrases.js'
 import {
   addNote,
   addPhrase,
+  addTask,
   deactivatePhrase,
   getBlockMessages,
   getDoneHabitIds,
@@ -25,10 +31,13 @@ import {
   getHabitsForUser,
   getPhrases,
   getSettingsForUser,
+  getTask,
+  getTasks,
   getUserByTelegramId,
   logNotification,
   markPhraseShown,
   toggleHabitLog,
+  toggleTask,
   wasNotificationSent,
 } from './pb-client.js'
 import { answerCallback, editMessage, handleStart, sendMessage, WEBAPP_URL, type TelegramUpdate } from './telegram.js'
@@ -62,16 +71,34 @@ export async function renderBlock(userId: string, time: string, dateKey: string,
   }
 }
 
+/** Вставить ряды кнопок перед кнопкой приложения (она всегда последняя). */
+function withRows(markup: { inline_keyboard: InlineButton[][] } | undefined, rows: InlineButton[][]) {
+  const all = markup?.inline_keyboard ?? []
+  const app = all.length && all[all.length - 1][0]?.web_app ? [all[all.length - 1]] : []
+  const merged = [...all.slice(0, all.length - app.length), ...rows, ...app]
+  return merged.length ? { inline_keyboard: merged } : undefined
+}
+
+/** Утреннее «Вчера»: привычки за вчера + открытые задачи (кнопки задач — пока сообщение не устарело). */
 export async function renderYesterday(userId: string, dateKey: string, todayKey: string) {
   const habits = summaryHabits(await getHabitsForUser(userId))
   const done = await getDoneHabitIds(userId, dateKey)
   const markable = isMarkable(dateKey, todayKey, BACKFILL_DAYS)
-  return {
-    habits,
-    done,
-    text: yesterdayText(habits, done),
-    markup: blockKeyboard(habits, done, dateKey, WEBAPP_URL, markable, 'y'),
-  }
+  const tasks = visibleTasks(await getTasks(userId), new Date())
+  const text = tasks.length
+    ? `${yesterdayText(habits, done)}\n\n<b>Задачи</b>\n${tasksLines(tasks).join('\n')}`
+    : yesterdayText(habits, done)
+  const markup = blockKeyboard(habits, done, dateKey, WEBAPP_URL, markable, 'y')
+  return { habits, done, text, markup: withRows(markup, markable ? taskButtons(tasks, dateKey) : []) }
+}
+
+/** /задачи: открытые задачи кнопками (+ сделанные за сутки — чтобы можно было вернуть). */
+export async function renderTaskList(userId: string) {
+  const tasks = visibleTasks(await getTasks(userId), new Date())
+  const text = tasks.length ? ['<b>Задачи</b>', ...tasksLines(tasks)].join('\n') : 'Открытых задач нет.'
+  const app = WEBAPP_URL ? [[{ text: 'Открыть приложение', web_app: { url: WEBAPP_URL } }]] : []
+  const rows = [...taskButtons(tasks, 'l'), ...app]
+  return { text, markup: rows.length ? { inline_keyboard: rows } : undefined }
 }
 
 async function userZone(userId: string): Promise<string> {
@@ -121,7 +148,28 @@ async function maybeClose(userId: string, chatId: string, time: string, dateKey:
   })
 }
 
+async function onTaskCallback(cb: NonNullable<TelegramUpdate['callback_query']>, taskId: string, where: string) {
+  const task = await getTask(taskId)
+  if (!task || !cb.message) {
+    await answerCallback(cb.id)
+    return
+  }
+  await answerCallback(cb.id)
+  const state = await toggleTask(task)
+  const timezone = await userZone(task.user)
+  if (state === null) console.error('[bot] task toggle failed', task.id)
+  else void syncSheet(task.user, timezone)
+  const chatId = String(cb.message.chat.id)
+  const messageId = String(cb.message.message_id)
+  const todayKey = getLocalTime(timezone).dateKey
+  await redraw(chatId, messageId, () =>
+    where === 'l' ? renderTaskList(task.user) : renderYesterday(task.user, where, todayKey)
+  )
+}
+
 async function onCallback(cb: NonNullable<TelegramUpdate['callback_query']>): Promise<void> {
+  const taskCb = parseTaskCallback(cb.data)
+  if (taskCb) return onTaskCallback(cb, taskCb.taskId, taskCb.where)
   const parsed = parseCallback(cb.data)
   const habit = parsed && (await getHabit(parsed.habitId))
   if (!parsed || !habit || !cb.message) {
@@ -258,6 +306,24 @@ async function onCommand(chatId: string, cmd: string, args: string): Promise<voi
         return
       }
       await reply((await deactivatePhrase(id)) ? `Фраза ${escapeHtml(id)} убрана.` : `Своей фразы ${escapeHtml(id)} нет.`)
+      return
+    }
+    case 'задача':
+    case 'task':
+    case 'todo': {
+      if (!args) {
+        await reply('Текст задачи — после команды: <code>/задача купить корм коту</code>')
+        return
+      }
+      const task = await addTask(user.id, args)
+      if (task) void syncSheet(user.id, timezone)
+      await reply(task ? 'Записано в задачи.' : 'Не получилось записать, попробуй ещё раз.')
+      return
+    }
+    case 'задачи':
+    case 'tasks': {
+      const list = await renderTaskList(user.id)
+      await sendMessage(chatId, list.text, { replyMarkup: list.markup })
       return
     }
     case 'мысль':

@@ -1,4 +1,4 @@
-import type { Habit, HabitLog, Note, NotificationSettings, NotificationLog, Phrase, UserRecord } from './types.js'
+import type { Habit, HabitLog, Note, NotificationSettings, NotificationLog, Phrase, Task, UserRecord } from './types.js'
 
 const PB_URL = (process.env.PB_URL || 'http://127.0.0.1:8090').replace(/\/+$/, '')
 const PB_ADMIN_EMAIL = process.env.PB_ADMIN_EMAIL || ''
@@ -231,4 +231,30 @@ export async function addNote(text: string): Promise<Note | null> {
 export async function getNotes(): Promise<Note[]> {
   const data = await request<{ items: Note[] }>('/api/collections/notes/records?sort=created&perPage=5000')
   return data?.items || []
+}
+
+// ─── задачи ─────────────────────────────────────────────────────────────────
+
+export async function getTasks(userId: string): Promise<Task[]> {
+  const filter = encodeURIComponent(`user='${userId}'`)
+  const data = await request<{ items: Task[] }>(`/api/collections/tasks/records?filter=(${filter})&sort=created&perPage=1000`)
+  return data?.items || []
+}
+
+export async function getTask(taskId: string): Promise<Task | null> {
+  return request<Task>(`/api/collections/tasks/records/${encodeURIComponent(taskId)}`)
+}
+
+export async function addTask(userId: string, title: string): Promise<Task | null> {
+  return request<Task>('/api/collections/tasks/records', { method: 'POST', body: { user: userId, title, done: false } })
+}
+
+/** Отметить/снять задачу. Возвращает новое состояние или null при ошибке. */
+export async function toggleTask(task: Task): Promise<boolean | null> {
+  const done = !task.done
+  const res = await request<Task>(`/api/collections/tasks/records/${task.id}`, {
+    method: 'PATCH',
+    body: { done, done_at: done ? new Date().toISOString() : '' },
+  })
+  return res ? done : null
 }
