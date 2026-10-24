@@ -16,7 +16,7 @@ export const HABITS_SHEET = 'Привычки'
 export const LOGS_SHEET = 'Отметки'
 export const NOTES_SHEET = 'Мысли'
 export const TASKS_SHEET = 'Задачи'
-const TASKS_HEAD = ['Создана', 'Задача', 'Сделано', 'Когда сделано']
+const TASKS_HEAD = ['День', 'Задача', 'Сделано', 'Когда сделано', 'Создана']
 const NOTES_HEAD = ['Дата', 'Время', 'Мысль']
 const HABITS_HEAD = ['Привычка', 'Тип', 'Цель', 'Напоминание', 'В архиве']
 const LOGS_HEAD = ['Дата', 'Привычка', 'Значение', 'Время отметки']
@@ -72,12 +72,13 @@ export function taskRows(tasks: Task[], timezone: string): string[][] {
     new Intl.DateTimeFormat('sv-SE', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' })
       .format(new Date(iso.replace(' ', 'T')))
   return [...tasks]
-    .sort((a, b) => a.created.localeCompare(b.created))
+    .sort((a, b) => (a.date || day(a.created)).localeCompare(b.date || day(b.created)) || a.created.localeCompare(b.created))
     .map((t) => [
-      day(t.created),
+      t.date || day(t.created),
       asText(t.title),
       t.done ? 'да' : '',
       t.done && t.done_at ? `${day(t.done_at)} ${localTime(t.done_at, timezone)}` : '',
+      day(t.created),
     ])
 }
 

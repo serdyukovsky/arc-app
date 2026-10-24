@@ -84,7 +84,7 @@ export async function renderYesterday(userId: string, dateKey: string, todayKey:
   const habits = summaryHabits(await getHabitsForUser(userId))
   const done = await getDoneHabitIds(userId, dateKey)
   const markable = isMarkable(dateKey, todayKey, BACKFILL_DAYS)
-  const tasks = visibleTasks(await getTasks(userId), new Date())
+  const tasks = visibleTasks(await getTasks(userId), new Date(), todayKey)
   const text = tasks.length
     ? `${yesterdayText(habits, done)}\n\n<b>Задачи</b>\n${tasksLines(tasks).join('\n')}`
     : yesterdayText(habits, done)
@@ -93,8 +93,8 @@ export async function renderYesterday(userId: string, dateKey: string, todayKey:
 }
 
 /** /задачи: открытые задачи кнопками (+ сделанные за сутки — чтобы можно было вернуть). */
-export async function renderTaskList(userId: string) {
-  const tasks = visibleTasks(await getTasks(userId), new Date())
+export async function renderTaskList(userId: string, todayKey: string) {
+  const tasks = visibleTasks(await getTasks(userId), new Date(), todayKey)
   const text = tasks.length ? ['<b>Задачи</b>', ...tasksLines(tasks)].join('\n') : 'Открытых задач нет.'
   const app = WEBAPP_URL ? [[{ text: 'Открыть приложение', web_app: { url: WEBAPP_URL } }]] : []
   const rows = [...taskButtons(tasks, 'l'), ...app]
@@ -163,7 +163,7 @@ async function onTaskCallback(cb: NonNullable<TelegramUpdate['callback_query']>,
   const messageId = String(cb.message.message_id)
   const todayKey = getLocalTime(timezone).dateKey
   await redraw(chatId, messageId, () =>
-    where === 'l' ? renderTaskList(task.user) : renderYesterday(task.user, where, todayKey)
+    where === 'l' ? renderTaskList(task.user, todayKey) : renderYesterday(task.user, where, todayKey)
   )
 }
 
@@ -315,14 +315,14 @@ async function onCommand(chatId: string, cmd: string, args: string): Promise<voi
         await reply('Текст задачи — после команды: <code>/задача купить корм коту</code>')
         return
       }
-      const task = await addTask(user.id, args)
+      const task = await addTask(user.id, args, getLocalTime(timezone).dateKey)
       if (task) void syncSheet(user.id, timezone)
       await reply(task ? 'Записано в задачи.' : 'Не получилось записать, попробуй ещё раз.')
       return
     }
     case 'задачи':
     case 'tasks': {
-      const list = await renderTaskList(user.id)
+      const list = await renderTaskList(user.id, getLocalTime(timezone).dateKey)
       await sendMessage(chatId, list.text, { replyMarkup: list.markup })
       return
     }

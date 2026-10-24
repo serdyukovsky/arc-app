@@ -87,6 +87,7 @@ export interface Task {
   title: string
   done: boolean
   done_at?: string
+  date?: string // день задачи YYYY-MM-DD; невыполненные из прошлых дней — в «сегодня»
   order?: number
   created: string
 }

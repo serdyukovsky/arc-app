@@ -9,6 +9,7 @@ export interface Task {
   title: string
   done: boolean
   done_at?: string
+  date?: string // день задачи YYYY-MM-DD; невыполненные из прошлых дней показываются в «сегодня»
   order?: number
   created: string
 }
@@ -59,16 +60,16 @@ export function useTasks(token: string | null, userId: string | null) {
   }, [fetchTasks])
 
   const addTask = useCallback(
-    async (title: string) => {
+    async (title: string, date: string) => {
       const text = title.trim()
       if (!text) return
-      const temp: Task = { id: `temp_${Date.now()}`, user: userId || '', title: text, done: false, created: new Date().toISOString() }
+      const temp: Task = { id: `temp_${Date.now()}`, user: userId || '', title: text, done: false, date, created: new Date().toISOString() }
       apply([...tasksRef.current, temp])
       if (devMode) return
       const res = await pbRequest<Task>('/api/collections/tasks/records', {
         method: 'POST',
         token: token || undefined,
-        body: { user: userId, title: text, done: false },
+        body: { user: userId, title: text, date, done: false },
       })
       if (res.ok && res.data) apply(tasksRef.current.map((t) => (t.id === temp.id ? res.data! : t)))
       else void fetchTasks()

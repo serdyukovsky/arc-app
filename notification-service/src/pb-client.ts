@@ -245,8 +245,8 @@ export async function getTask(taskId: string): Promise<Task | null> {
   return request<Task>(`/api/collections/tasks/records/${encodeURIComponent(taskId)}`)
 }
 
-export async function addTask(userId: string, title: string): Promise<Task | null> {
-  return request<Task>('/api/collections/tasks/records', { method: 'POST', body: { user: userId, title, done: false } })
+export async function addTask(userId: string, title: string, date: string): Promise<Task | null> {
+  return request<Task>('/api/collections/tasks/records', { method: 'POST', body: { user: userId, title, date, done: false } })
 }
 
 /** Отметить/снять задачу. Возвращает новое состояние или null при ошибке. */

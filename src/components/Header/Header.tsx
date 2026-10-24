@@ -1,4 +1,5 @@
-import { getGreeting, getWeekDays, isToday, DAY_NAMES_SHORT, parseKey, today } from '@/lib/date'
+import { getGreeting, today } from '@/lib/date'
+import { WeekStrip } from '@/components/WeekStrip/WeekStrip'
 import styles from './Header.module.css'
 
 interface HeaderProps {
@@ -7,45 +8,10 @@ interface HeaderProps {
 }
 
 export function Header({ selectedDay = null, onDayPress }: HeaderProps = {}) {
-  const todayKey = today()
-  const activeDay = selectedDay ?? todayKey
-  const weekDays = getWeekDays()
-  const todayDate = parseKey(todayKey)
-  const todayTime = todayDate.getTime()
-
   return (
     <div className={styles.header}>
       <div className={styles.greeting}>{getGreeting()}</div>
-      <div className={styles.week}>
-        {weekDays.map((day, i) => {
-          const isCurrentDay = isToday(day)
-          const isSelectedDay = day === activeDay
-          const dayDate = parseKey(day)
-          const isFuture = dayDate.getTime() > todayTime
-          return (
-            <button
-              key={day}
-              type="button"
-              className={`${styles.weekDay} ${styles.weekDayButton}`}
-              onClick={() => onDayPress?.(day)}
-              disabled={!onDayPress}
-              aria-label={`Открыть день ${day}`}
-            >
-              <span
-                className={`${styles.weekLabel} ${isCurrentDay ? styles.weekLabelToday : ''} ${isSelectedDay ? styles.weekLabelSelected : ''}`}
-              >
-                {DAY_NAMES_SHORT[i]}
-              </span>
-              <span
-                className={`${styles.weekDate} ${isFuture ? styles.weekDateFuture : ''} ${isSelectedDay ? styles.weekDateSelected : ''}`}
-              >
-                {dayDate.getDate()}
-              </span>
-              <span className={`${styles.todayDot} ${isCurrentDay ? styles.todayDotVisible : ''}`} />
-            </button>
-          )
-        })}
-      </div>
+      <WeekStrip selectedDay={selectedDay ?? today()} onDayPress={onDayPress} />
     </div>
   )
 }

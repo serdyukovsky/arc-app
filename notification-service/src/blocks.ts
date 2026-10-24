@@ -99,10 +99,11 @@ export function isMarkable(dateKey: string, todayKey: string, backfillDays: numb
 // ─── задачи ─────────────────────────────────────────────────────────────────
 // callback_data: `t:<taskId>:<где>` — где: `l` (список /задачи) или дата утреннего «Вчера».
 
-/** Открытые — сверху (в порядке добавления), сделанные за последние сутки — ниже (чтобы можно было вернуть). */
-export function visibleTasks(tasks: Task[], now: Date): Task[] {
+/** На сегодня: открытые с днём не позже сегодня (просроченные переезжают сюда), в порядке добавления;
+ *  ниже — сделанные за последние сутки (чтобы можно было вернуть). Задачи на будущие дни — не видны. */
+export function visibleTasks(tasks: Task[], now: Date, todayKey: string): Task[] {
   const dayAgo = now.getTime() - 24 * 3600 * 1000
-  const open = tasks.filter((t) => !t.done).sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.created.localeCompare(b.created))
+  const open = tasks.filter((t) => !t.done && (t.date || todayKey) <= todayKey).sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.created.localeCompare(b.created))
   const recent = tasks
     .filter((t) => t.done && t.done_at && new Date(t.done_at).getTime() >= dayAgo)
     .sort((a, b) => (a.done_at || '').localeCompare(b.done_at || ''))

@@ -37,6 +37,7 @@ interface HomeScreenProps {
   } | null
   onEditHabit: (habit: Habit, fromDrawer?: boolean) => void
   restoreDrawerHabitId?: string | null
+  onAddHabit: () => void
   onRestoreDrawerHandled?: () => void
 }
 
@@ -81,6 +82,7 @@ export function HomeScreen({
   onEditHabit,
   restoreDrawerHabitId = null,
   onRestoreDrawerHandled,
+  onAddHabit,
 }: HomeScreenProps) {
   const [drawerHabit, setDrawerHabit] = useState<Habit | null>(null)
   const [pulseHabitId, setPulseHabitId] = useState<string | null>(null)
@@ -364,6 +366,7 @@ export function HomeScreen({
         completed={activeDay === todayKey ? todayCompletedCount : completedForActiveDay}
         total={habits.length}
         label={activeDay === todayKey ? 'Сегодня' : formatDate(activeDay)}
+        onAdd={onAddHabit}
       />
 
       <div className={styles.list}>

@@ -824,6 +824,12 @@ export default function App() {
                 }}
                 restoreDrawerHabitId={restoreDrawerHabitId}
                 onRestoreDrawerHandled={() => setRestoreDrawerHabitId(null)}
+                onAddHabit={() => {
+                  setRestoreDrawerHabitId(null)
+                  setEditFromDrawer(false)
+                  setEditHabit(null)
+                  setCreateOpen(true)
+                }}
               />
             )}
             {screen === 'analytics' && (
@@ -863,16 +869,7 @@ export default function App() {
         </AnimatePresence>
       </div>
 
-      <NavBar
-        active={screen}
-        onNavigate={navigateTo}
-        onFabClick={() => {
-          setRestoreDrawerHabitId(null)
-          setEditFromDrawer(false)
-          setEditHabit(null)
-          setCreateOpen(true)
-        }}
-      />
+      <NavBar active={screen} onNavigate={navigateTo} />
 
       <CreateHabit
         open={createOpen || !!editHabit}

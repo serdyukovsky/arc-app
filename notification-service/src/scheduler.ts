@@ -172,7 +172,7 @@ async function processUser(settings: any, chatId: string) {
       const d = new Date(`${dateKey}T00:00:00Z`)
       d.setUTCDate(d.getUTCDate() - 1)
       const yesterdayKey = d.toISOString().slice(0, 10)
-      const openTasks = (await getTasks(userId)).filter((t) => !t.done).length
+      const openTasks = (await getTasks(userId)).filter((t) => !t.done && (t.date || dateKey) <= dateKey).length
       const hasContent = summaryHabits(habits).length > 0 || openTasks > 0
       if (hasContent && !(await wasNotificationSent(userId, 'yesterday', yesterdayKey))) {
         const y = await renderYesterday(userId, yesterdayKey, dateKey)
