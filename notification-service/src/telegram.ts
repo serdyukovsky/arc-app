@@ -163,14 +163,25 @@ export async function getUpdates(offset?: number): Promise<TelegramUpdate[]> {
   return result ?? []
 }
 
+/** Меню бота — список команд (не приложение): кнопка приложения в меню вытесняла команды. */
+export async function setCommandsMenuButton(chatId: string): Promise<void> {
+  await apiCall('setChatMenuButton', { chat_id: chatId, menu_button: { type: 'commands' } })
+}
+
+/** Убрать постоянную клавиатуру «Открыть приложение» (старый /start) — она закрывала поле ввода. */
+export async function removeReplyKeyboard(chatId: string, text: string): Promise<void> {
+  await apiCall('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', reply_markup: { remove_keyboard: true } })
+}
+
 export async function handleStart(chatId: string): Promise<void> {
-  await setChatMenuButton(chatId)
-  await sendMessage(chatId, START_TEXT, {
-    parseMode: 'HTML',
-    withAppButton: true,
-    buttonText: 'Открыть приложение',
-    persistentAppKeyboard: true,
-  })
+  await setCommandsMenuButton(chatId)
+  await removeReplyKeyboard(chatId, START_TEXT)
+  await sendApp(chatId)
+}
+
+/** /app — приложение кнопкой под сообщением. */
+export async function sendApp(chatId: string): Promise<void> {
+  await sendMessage(chatId, 'Приложение — кнопкой ниже.', { withAppButton: true })
 }
 
 export async function pollBotUpdates(onUpdate: (update: TelegramUpdate) => Promise<void>): Promise<void> {

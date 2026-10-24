@@ -40,7 +40,7 @@ import {
   toggleTask,
   wasNotificationSent,
 } from './pb-client.js'
-import { answerCallback, editMessage, handleStart, sendMessage, WEBAPP_URL, type TelegramUpdate } from './telegram.js'
+import { answerCallback, editMessage, handleStart, sendApp, sendMessage, WEBAPP_URL, type TelegramUpdate } from './telegram.js'
 import type { Habit } from './types.js'
 
 export const blockSlot = (time: string) => `block_${time}`
@@ -262,6 +262,7 @@ async function skip(userId: string, chatId: string, arg: string, timezone: strin
 
 async function onCommand(chatId: string, cmd: string, args: string): Promise<void> {
   if (cmd === 'start') return handleStart(chatId)
+  if (cmd === 'app' || cmd === 'приложение') return sendApp(chatId)
   const user = await getUserByTelegramId(chatId)
   if (!user) {
     await sendMessage(chatId, 'Сначала открой приложение — там заводятся привычки.')
