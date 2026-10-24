@@ -8,20 +8,10 @@ interface WeekStripProps {
   onDayPress?: (day: string) => void
 }
 
-const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
-
 const shiftWeek = (key: string, weeks: number): string => {
   const d = parseKey(key)
   d.setDate(d.getDate() + 7 * weeks)
   return toKey(d)
-}
-
-const weekCaption = (days: string[]): string => {
-  const a = parseKey(days[0])
-  const b = parseKey(days[6])
-  return a.getMonth() === b.getMonth()
-    ? `${a.getDate()}–${b.getDate()} ${MONTHS[b.getMonth()]}`
-    : `${a.getDate()} ${MONTHS[a.getMonth()]} – ${b.getDate()} ${MONTHS[b.getMonth()]}`
 }
 
 const SWIPE_PX = 40
@@ -40,7 +30,6 @@ export function WeekStrip({ selectedDay, onDayPress }: WeekStripProps) {
   }, [selectedDay])
 
   const weekDays = getWeekDays(anchor)
-  const isCurrentWeek = weekDays.includes(todayKey)
   const todayTime = parseKey(todayKey).getTime()
 
   const go = (weeks: number) => {
@@ -110,22 +99,6 @@ export function WeekStrip({ selectedDay, onDayPress }: WeekStripProps) {
         </AnimatePresence>
       </div>
 
-      {!isCurrentWeek && (
-        <div className={styles.caption}>
-          <span>{weekCaption(weekDays)}</span>
-          <button
-            type="button"
-            className={styles.toToday}
-            onClick={() => {
-              setDirection(anchor < todayKey ? 1 : -1)
-              setAnchor(todayKey)
-              onDayPress?.(todayKey)
-            }}
-          >
-            к сегодня
-          </button>
-        </div>
-      )}
     </div>
   )
 }
