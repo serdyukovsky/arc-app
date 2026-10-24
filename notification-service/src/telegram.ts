@@ -14,6 +14,7 @@ interface SendMessageOptions {
   buttonText?: string
   persistentAppKeyboard?: boolean
   replyMarkup?: unknown // своя клавиатура (сообщение-блок) — вместо кнопки приложения
+  replyTo?: string // ответом на сообщение (доводчик — к своему блоку)
 }
 
 interface TelegramApiResponse<T> {
@@ -102,6 +103,7 @@ export async function sendMessage(
     buttonText = 'Открыть приложение',
     persistentAppKeyboard = false,
     replyMarkup,
+    replyTo,
   } = options
 
   const body: Record<string, unknown> = {
@@ -109,6 +111,8 @@ export async function sendMessage(
     text,
     parse_mode: parseMode,
   }
+
+  if (replyTo) body.reply_parameters = { message_id: Number(replyTo), allow_sending_without_reply: true }
 
   if (replyMarkup) {
     body.reply_markup = replyMarkup

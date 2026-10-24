@@ -1,19 +1,23 @@
 import {
+  getBlockMessages,
   getHabitsForUser,
   getLogsForUser,
+  getPhrases,
   getSettingsForUser,
   getUserByTelegramId,
+  markPhraseShown,
   wasNotificationSent,
   logNotification,
 } from './pb-client.js'
 import { sendMessage } from './telegram.js'
-import { getLocalTime, isInQuietHours, toKey, getMonday } from './date.js'
+import { getLocalTime, isInQuietHours, parseTime, toKey, getMonday } from './date.js'
 import { getStreak } from './streak.js'
 import { weeklyReportMessage } from './templates.js'
-import { ALLOWED_TELEGRAM_ID } from './config.js'
-import { isTappable, reminderTime } from './blocks.js'
-import { blockHabits, expireBlocks, renderBlock } from './bot.js'
+import { ALLOWED_TELEGRAM_ID, isEvening, NUDGE_AFTER_MIN } from './config.js'
+import { isTappable, nudgeText, reminderTime } from './blocks.js'
+import { blockHabits, blockSlot, expireBlocks, isSkipped, renderBlock, renderYesterday, summaryHabits } from './bot.js'
 import { syncSheet } from './export.js'
+import { pickPhrase } from './phrases.js'
 import type { Habit, HabitLog } from './types.js'
 
 function buildDoneDates(logs: HabitLog[], habitId: string): Set<string> {
@@ -113,8 +117,9 @@ async function processUser(settings: any, chatId: string) {
   // ─── Сообщение-блок: все привычки этого времени, с кнопками отметки ──────
   const times = new Set(habits.map(reminderTime).filter((t): t is string => !!t))
   if (times.has(currentTimeStr) && blockHabits(habits, currentTimeStr).length > 0) {
-    const slot = `block_${currentTimeStr}`
-    if (!(await wasNotificationSent(userId, 'reminder', dateKey, slot))) {
+    const slot = blockSlot(currentTimeStr)
+    const skipped = await isSkipped(userId, dateKey, currentTimeStr) // /skip до отправки
+    if (!skipped && !(await wasNotificationSent(userId, 'reminder', dateKey, slot))) {
       const block = await renderBlock(userId, currentTimeStr, dateKey, dateKey)
       // всё уже отмечено — молчим; блок из одних счётчиков — просто напоминание с кнопкой приложения
       if (!block.complete || !block.habits.some(isTappable)) {
@@ -129,6 +134,51 @@ async function processUser(settings: any, chatId: string) {
             slot,
           })
           console.log(`[notify] block ${currentTimeStr} -> user ${userId}`)
+        }
+      }
+    }
+  }
+
+  // ─── Доводчик: один раз, через NUDGE_AFTER_MIN после блока, если отмечено не всё ──
+  // (проверка каждую минуту по журналу — переживает перезапуск сервиса)
+  for (const sent of await getBlockMessages(userId, dateKey)) {
+    const time = sent.slot?.startsWith('block_') ? sent.slot.slice('block_'.length) : null
+    if (!time || !sent.message_id) continue
+    if (Date.now() - new Date(sent.sent_at).getTime() < NUDGE_AFTER_MIN * 60 * 1000) continue
+    if (await wasNotificationSent(userId, 'nudge', dateKey, sent.slot)) continue
+    if (await isSkipped(userId, dateKey, time)) continue
+    const block = await renderBlock(userId, time, dateKey, dateKey)
+    const left = block.habits.filter((h) => isTappable(h) && !block.done.has(h.id))
+    if (left.length === 0) continue
+    // своя фраза — только в вечернем блоке: записка от себя, когда вставать не хочется
+    const own = isEvening(time) ? pickPhrase(await getPhrases('own'), new Date()) : null
+    const messageId = await sendMessage(chatId, nudgeText(time, left, own?.text), {
+      withAppButton: false,
+      replyTo: sent.message_id,
+    })
+    if (own) await markPhraseShown(own.id, new Date().toISOString())
+    await logNotification({
+      user: userId, type: 'nudge', sent_at: new Date().toISOString(), date_key: dateKey,
+      message_id: messageId || undefined, slot: sent.slot,
+    })
+    console.log(`[notify] nudge ${time} -> user ${userId}`)
+  }
+
+  // ─── Утро: «Вчера» — что отмечено, неотмеченное кнопками (доотметить) ──────
+  if (settings.morning_digest !== false) {
+    const at = parseTime(settings.morning_digest_time || '08:00')
+    if (hours === at.hours && minutes === at.minutes) {
+      const d = new Date(`${dateKey}T00:00:00Z`)
+      d.setUTCDate(d.getUTCDate() - 1)
+      const yesterdayKey = d.toISOString().slice(0, 10)
+      if (summaryHabits(habits).length > 0 && !(await wasNotificationSent(userId, 'yesterday', yesterdayKey))) {
+        const y = await renderYesterday(userId, yesterdayKey, dateKey)
+        const messageId = await sendMessage(chatId, y.text, { replyMarkup: y.markup })
+        if (messageId) {
+          await logNotification({
+            user: userId, type: 'yesterday', sent_at: new Date().toISOString(), date_key: yesterdayKey,
+            message_id: messageId,
+          })
         }
       }
     }

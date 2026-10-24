@@ -62,3 +62,21 @@ export type NotificationType =
   | 'evening_summary'
   | 'weekly_report'
   | 'return_nudge'
+  | 'nudge' // доводчик к блоку (slot = block_HH:MM)
+  | 'closing' // фраза-закрытие к блоку
+  | 'skip' // /skip: блок за дату пропущен
+  | 'yesterday' // утреннее «Вчера»; date_key — дата, о которой сообщение
+
+export interface Phrase {
+  id: string
+  slot: 'closing' | 'own'
+  text: string
+  last_shown_at?: string
+  is_active: boolean
+}
+
+export interface Note {
+  id: string
+  text: string
+  created: string
+}

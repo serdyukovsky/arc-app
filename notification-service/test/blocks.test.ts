@@ -59,7 +59,7 @@ test('всё отмечено или день вышел из запаса — �
 })
 
 test('разбор нажатия', () => {
-  assert.deepEqual(parseCallback('h:228c8g2igvyf80q:2026-10-24'), { habitId: '228c8g2igvyf80q', dateKey: '2026-10-24' })
+  assert.deepEqual(parseCallback('h:228c8g2igvyf80q:2026-10-24'), { kind: 'h', habitId: '228c8g2igvyf80q', dateKey: '2026-10-24' })
   assert.equal(parseCallback('h:x:bad'), null)
   assert.equal(parseCallback('item:5:2026-10-24'), null)
   assert.equal(parseCallback(undefined), null)

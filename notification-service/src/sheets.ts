@@ -6,7 +6,7 @@
 // Google с сервера доступен напрямую, прокси не нужен.
 import { createSign } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import type { Habit, HabitLog } from './types.js'
+import type { Habit, HabitLog, Note } from './types.js'
 
 const SHEET_ID = (process.env.SHEET_ID || '').trim()
 const CREDENTIALS = process.env.GOOGLE_CREDENTIALS || '/opt/arc-notifications/secrets/google.json'
@@ -14,6 +14,8 @@ const API = 'https://sheets.googleapis.com/v4/spreadsheets'
 
 export const HABITS_SHEET = 'Привычки'
 export const LOGS_SHEET = 'Отметки'
+export const NOTES_SHEET = 'Мысли'
+const NOTES_HEAD = ['Дата', 'Время', 'Мысль']
 const HABITS_HEAD = ['Привычка', 'Тип', 'Цель', 'Напоминание', 'В архиве']
 const LOGS_HEAD = ['Дата', 'Привычка', 'Значение', 'Время отметки']
 
@@ -52,6 +54,15 @@ export function logRows(logs: HabitLog[], habits: Habit[], timezone: string): st
     .filter((l) => l.value > 0 && names.has(l.habit))
     .sort((a, b) => a.date.localeCompare(b.date) || (a.created || '').localeCompare(b.created || ''))
     .map((l) => [l.date, asText(names.get(l.habit)!), String(l.value), localTime(l.created, timezone)])
+}
+
+export function noteRows(notes: Note[], timezone: string): string[][] {
+  const day = (iso: string) =>
+    new Intl.DateTimeFormat('sv-SE', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' })
+      .format(new Date(iso.replace(' ', 'T')))
+  return [...notes]
+    .sort((a, b) => a.created.localeCompare(b.created))
+    .map((n) => [day(n.created), localTime(n.created, timezone), asText(n.text)])
 }
 
 // ─── Google ─────────────────────────────────────────────────────────────────
@@ -139,14 +150,20 @@ async function writeSheet(ids: Map<string, number>, title: string, values: strin
 
 let last = ''
 
-/** Перезаписать оба листа; если с прошлого раза ничего не поменялось — не трогать Google. */
-export async function exportToSheet(habitValues: string[][], logValues: string[][]): Promise<boolean> {
+/** Перезаписать листы; если с прошлого раза ничего не поменялось — не трогать Google.
+ *  noteValues = null — лист «Мысли» не трогаем (его пока ведёт routine-bot). */
+export async function exportToSheet(
+  habitValues: string[][],
+  logValues: string[][],
+  noteValues: string[][] | null = null
+): Promise<boolean> {
   if (!SHEET_ID) return false
-  const snapshot = JSON.stringify([habitValues, logValues])
+  const snapshot = JSON.stringify([habitValues, logValues, noteValues])
   if (snapshot === last) return false
   const ids = await sheetIds()
   await writeSheet(ids, HABITS_SHEET, [HABITS_HEAD, ...habitValues])
   await writeSheet(ids, LOGS_SHEET, [LOGS_HEAD, ...logValues])
+  if (noteValues) await writeSheet(ids, NOTES_SHEET, [NOTES_HEAD, ...noteValues])
   last = snapshot
   return true
 }

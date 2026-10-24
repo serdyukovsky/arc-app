@@ -1,4 +1,4 @@
-import type { Habit, HabitLog, NotificationSettings, NotificationLog, UserRecord } from './types.js'
+import type { Habit, HabitLog, Note, NotificationSettings, NotificationLog, Phrase, UserRecord } from './types.js'
 
 const PB_URL = (process.env.PB_URL || 'http://127.0.0.1:8090').replace(/\/+$/, '')
 const PB_ADMIN_EMAIL = process.env.PB_ADMIN_EMAIL || ''
@@ -160,9 +160,9 @@ export function extractTelegramId(email: string): string | null {
   return match ? match[1] : null
 }
 
-/** Сообщения-блоки за дату (для перерисовки и снятия кнопок). */
-export async function getBlockMessages(userId: string, dateKey: string): Promise<NotificationLog[]> {
-  const filter = encodeURIComponent(`user='${userId}' && type='reminder' && date_key='${dateKey}'`)
+/** Записи журнала сообщений за дату (по умолчанию — сообщения-блоки). */
+export async function getBlockMessages(userId: string, dateKey: string, type = 'reminder'): Promise<NotificationLog[]> {
+  const filter = encodeURIComponent(`user='${userId}' && type='${type}' && date_key='${dateKey}'`)
   const data = await request<{ items: NotificationLog[] }>(
     `/api/collections/notification_log/records?filter=(${filter})&perPage=50`
   )
@@ -198,4 +198,37 @@ export async function logNotification(log: NotificationLog): Promise<void> {
     method: 'POST',
     body: log,
   })
+}
+
+// ─── фразы и мысли ──────────────────────────────────────────────────────────
+
+export async function getPhrases(slot: 'closing' | 'own'): Promise<Phrase[]> {
+  const filter = encodeURIComponent(`slot='${slot}' && is_active=true`)
+  const data = await request<{ items: Phrase[] }>(`/api/collections/phrases/records?filter=(${filter})&sort=created&perPage=500`)
+  return data?.items || []
+}
+
+export async function addPhrase(slot: 'closing' | 'own', text: string): Promise<Phrase | null> {
+  return request<Phrase>('/api/collections/phrases/records', { method: 'POST', body: { slot, text, is_active: true } })
+}
+
+/** Убрать свою фразу: is_active = false (запись остаётся). */
+export async function deactivatePhrase(phraseId: string): Promise<boolean> {
+  const phrase = await request<Phrase>(`/api/collections/phrases/records/${encodeURIComponent(phraseId)}`)
+  if (!phrase || phrase.slot !== 'own' || !phrase.is_active) return false
+  const res = await request(`/api/collections/phrases/records/${phrase.id}`, { method: 'PATCH', body: { is_active: false } })
+  return !!res
+}
+
+export async function markPhraseShown(phraseId: string, at: string): Promise<void> {
+  await request(`/api/collections/phrases/records/${phraseId}`, { method: 'PATCH', body: { last_shown_at: at } })
+}
+
+export async function addNote(text: string): Promise<Note | null> {
+  return request<Note>('/api/collections/notes/records', { method: 'POST', body: { text } })
+}
+
+export async function getNotes(): Promise<Note[]> {
+  const data = await request<{ items: Note[] }>('/api/collections/notes/records?sort=created&perPage=5000')
+  return data?.items || []
 }
