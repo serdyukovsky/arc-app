@@ -835,7 +835,7 @@ export default function App() {
             {screen === 'profile' && (
               <ProfileScreen
                 user={tgUser}
-                totalHabits={habits.length}
+                totalHabits={activeHabits.length}
                 bestStreak={bestStreak}
                 strictMode={notifSettings.strictMode}
                 onStrictModeChange={(v) => updateNotifSettings({ strictMode: v })}
