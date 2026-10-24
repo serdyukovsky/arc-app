@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, type PanInfo } from 'framer-motion'
 import { DAY_NAMES_SHORT, getWeekDays, isToday, parseKey, toKey, today } from '@/lib/date'
 import styles from './WeekStrip.module.css'
 
@@ -14,17 +14,25 @@ const shiftWeek = (key: string, weeks: number): string => {
   return toKey(d)
 }
 
-const SWIPE_PX = 40
+// неделя тянется за пальцем; отпустил дальше порога (или быстро смахнул) — уезжает целиком, новая въезжает с другой стороны
+const SWIPE_OFFSET = 60
+const SWIPE_VELOCITY = 350
+const spring = { type: 'spring' as const, stiffness: 420, damping: 38, mass: 0.8 }
+
+const variants = {
+  enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%', opacity: 0.4 }),
+  center: { x: 0, opacity: 1 },
+  exit: (dir: number) => ({ x: dir > 0 ? '-100%' : '100%', opacity: 0.4 }),
+}
 
 // Неделя Пн–Вс; свайп влево/вправо — следующая/предыдущая неделя.
 export function WeekStrip({ selectedDay, onDayPress }: WeekStripProps) {
   const todayKey = today()
   const [anchor, setAnchor] = useState(selectedDay)
   const [direction, setDirection] = useState(0)
-  const start = useRef<{ x: number; y: number } | null>(null)
-  const swiped = useRef(false)
+  const dragged = useRef(false)
 
-  // выбранный день вне показанной недели (например, вернулись к сегодня) — показать его неделю
+  // выбранный день вне показанной недели — показать его неделю
   useEffect(() => {
     setAnchor((a) => (getWeekDays(a).includes(selectedDay) ? a : selectedDay))
   }, [selectedDay])
@@ -32,73 +40,64 @@ export function WeekStrip({ selectedDay, onDayPress }: WeekStripProps) {
   const weekDays = getWeekDays(anchor)
   const todayTime = parseKey(todayKey).getTime()
 
-  const go = (weeks: number) => {
-    setDirection(weeks)
-    setAnchor((a) => shiftWeek(a, weeks))
+  const onDragEnd = (_: unknown, info: PanInfo) => {
+    const swipe = Math.abs(info.offset.x) > SWIPE_OFFSET || Math.abs(info.velocity.x) > SWIPE_VELOCITY
+    if (!swipe) return
+    const dir = info.offset.x < 0 ? 1 : -1
+    setDirection(dir)
+    setAnchor((a) => shiftWeek(a, dir))
   }
 
   return (
-    <div className={styles.wrap}>
-      <div
-        className={styles.viewport}
-        onPointerDown={(e) => {
-          start.current = { x: e.clientX, y: e.clientY }
-          swiped.current = false
-        }}
-        onPointerUp={(e) => {
-          if (!start.current) return
-          const dx = e.clientX - start.current.x
-          const dy = e.clientY - start.current.y
-          start.current = null
-          if (Math.abs(dx) > SWIPE_PX && Math.abs(dx) > Math.abs(dy) * 1.5) {
-            swiped.current = true
-            go(dx < 0 ? 1 : -1)
-          }
-        }}
-        onPointerCancel={() => (start.current = null)}
-      >
-        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
-          <motion.div
-            key={weekDays[0]}
-            className={styles.week}
-            custom={direction}
-            initial={{ opacity: 0, x: direction * 48 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: direction * -48 }}
-            transition={{ duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }}
-          >
-            {weekDays.map((day, i) => {
-              const isCurrentDay = isToday(day)
-              const isSelectedDay = day === selectedDay
-              const isFuture = parseKey(day).getTime() > todayTime
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  className={styles.day}
-                  onClick={() => {
-                    if (swiped.current) return // свайп, не тап
-                    onDayPress?.(day)
-                  }}
-                  disabled={!onDayPress}
-                  aria-label={`Открыть день ${day}`}
+    <div className={styles.viewport}>
+      <AnimatePresence initial={false} custom={direction} mode="popLayout">
+        <motion.div
+          key={weekDays[0]}
+          className={styles.week}
+          custom={direction}
+          variants={variants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={spring}
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.5}
+          dragMomentum={false}
+          onDragStart={() => (dragged.current = true)}
+          onDragEnd={onDragEnd}
+        >
+          {weekDays.map((day, i) => {
+            const isCurrentDay = isToday(day)
+            const isSelectedDay = day === selectedDay
+            const isFuture = parseKey(day).getTime() > todayTime
+            return (
+              <button
+                key={day}
+                type="button"
+                className={styles.day}
+                onPointerDown={() => (dragged.current = false)}
+                onClick={() => {
+                  if (dragged.current) return // это был свайп, не тап
+                  onDayPress?.(day)
+                }}
+                disabled={!onDayPress}
+                aria-label={`Открыть день ${day}`}
+              >
+                <span className={`${styles.label} ${isCurrentDay || isSelectedDay ? styles.labelStrong : ''}`}>
+                  {DAY_NAMES_SHORT[i]}
+                </span>
+                <span
+                  className={`${styles.date} ${isFuture ? styles.dateFuture : ''} ${isSelectedDay ? styles.dateSelected : ''}`}
                 >
-                  <span className={`${styles.label} ${isCurrentDay || isSelectedDay ? styles.labelStrong : ''}`}>
-                    {DAY_NAMES_SHORT[i]}
-                  </span>
-                  <span
-                    className={`${styles.date} ${isFuture ? styles.dateFuture : ''} ${isSelectedDay ? styles.dateSelected : ''}`}
-                  >
-                    {parseKey(day).getDate()}
-                  </span>
-                  <span className={`${styles.dot} ${isCurrentDay ? styles.dotVisible : ''}`} />
-                </button>
-              )
-            })}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-
+                  {parseKey(day).getDate()}
+                </span>
+                <span className={`${styles.dot} ${isCurrentDay ? styles.dotVisible : ''}`} />
+              </button>
+            )
+          })}
+        </motion.div>
+      </AnimatePresence>
     </div>
   )
 }

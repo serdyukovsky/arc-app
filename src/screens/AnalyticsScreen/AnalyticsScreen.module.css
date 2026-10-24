@@ -530,3 +530,18 @@
 .dayDetailsMiss {
   color: rgba(0, 0, 0, 0.32);
 }
+
+.tasksBlock {
+  margin-top: 1.75rem;
+}
+
+.tasksGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+}
+
+.tasksOpen {
+  font-size: 0.7rem;
+  color: rgba(0, 0, 0, 0.38);
+}

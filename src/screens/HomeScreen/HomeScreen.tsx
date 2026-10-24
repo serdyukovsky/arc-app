@@ -38,6 +38,7 @@ interface HomeScreenProps {
   onEditHabit: (habit: Habit, fromDrawer?: boolean) => void
   restoreDrawerHabitId?: string | null
   onAddHabit: () => void
+  onArchiveHabit: (habit: Habit) => void
   onRestoreDrawerHandled?: () => void
 }
 
@@ -83,6 +84,7 @@ export function HomeScreen({
   restoreDrawerHabitId = null,
   onRestoreDrawerHandled,
   onAddHabit,
+  onArchiveHabit,
 }: HomeScreenProps) {
   const [drawerHabit, setDrawerHabit] = useState<Habit | null>(null)
   const [pulseHabitId, setPulseHabitId] = useState<string | null>(null)
@@ -421,15 +423,30 @@ export function HomeScreen({
                 </div>
                 <div className={styles.drawerTitle}>{drawerHabit.name}</div>
               </div>
-              <button
-                type="button"
-                className={styles.drawerIconAction}
-                aria-label="Изменить привычку"
-                disabled={drawerExpandingToEdit}
-                onClick={handleDrawerEdit}
-              >
-                <Icon name="edit" size={20} />
-              </button>
+              <div className={styles.drawerActions}>
+                <button
+                  type="button"
+                  className={styles.drawerIconAction}
+                  aria-label="В архив"
+                  disabled={drawerExpandingToEdit}
+                  onClick={() => {
+                    const habit = drawerHabit
+                    handleDrawerClose()
+                    onArchiveHabit(habit)
+                  }}
+                >
+                  <Icon name="archive" size={20} />
+                </button>
+                <button
+                  type="button"
+                  className={styles.drawerIconAction}
+                  aria-label="Изменить привычку"
+                  disabled={drawerExpandingToEdit}
+                  onClick={handleDrawerEdit}
+                >
+                  <Icon name="edit" size={20} />
+                </button>
+              </div>
             </div>
 
             <div className={styles.drawerPairRow}>

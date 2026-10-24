@@ -1,16 +1,19 @@
-.wrap {
-  position: relative;
-}
-
 .viewport {
+  position: relative;
   overflow: hidden;
   touch-action: pan-y; /* горизонтальный свайп — наш, вертикальная прокрутка — страницы */
+  margin: 0 -0.5rem; /* запас по краям, чтобы уезжающая неделя не обрезалась у первого/последнего дня */
+  padding: 0 0.5rem;
 }
 
 .week {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .day {

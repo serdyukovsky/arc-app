@@ -824,6 +824,10 @@ export default function App() {
                 }}
                 restoreDrawerHabitId={restoreDrawerHabitId}
                 onRestoreDrawerHandled={() => setRestoreDrawerHabitId(null)}
+                onArchiveHabit={(habit) => {
+                  archiveHabit(habit.id)
+                  showToast(`«${habit.name}» — в архиве`, () => unarchiveHabit(habit.id))
+                }}
                 onAddHabit={() => {
                   setRestoreDrawerHabitId(null)
                   setEditFromDrawer(false)
@@ -836,6 +840,7 @@ export default function App() {
               <AnalyticsScreen
                 habits={activeHabits}
                 logs={logs}
+                tasks={tasks}
                 getStreak={getHabitStreak}
                 getBestStreak={getHabitBestStreak}
                 onClose={() => navigateTo('home')}

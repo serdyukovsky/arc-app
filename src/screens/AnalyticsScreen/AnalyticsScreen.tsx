@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import type { Task } from '@/hooks/useTasks'
 import { AnimatePresence, animate, motion, useReducedMotion } from 'framer-motion'
 import type { Habit, HabitLog } from '@/types'
 import { parseKey, toKey } from '@/lib/date'
@@ -7,6 +8,7 @@ import styles from './AnalyticsScreen.module.css'
 interface AnalyticsScreenProps {
   habits: Habit[]
   logs: HabitLog[]
+  tasks: Task[]
   getStreak: (habit: Habit) => number
   getBestStreak: (habit: Habit) => number
   onClose: () => void
@@ -120,7 +122,7 @@ function AnimatedNumber({ value, prefix = '', suffix = '' }: AnimatedNumberProps
   )
 }
 
-export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClose }: AnalyticsScreenProps) {
+export function AnalyticsScreen({ habits, logs, tasks, getStreak, getBestStreak, onClose }: AnalyticsScreenProps) {
   const [period, setPeriod] = useState<Period>('week')
   const [offset, setOffset] = useState(0)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
@@ -151,6 +153,18 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
   const prevRange = useMemo(() => {
     return period === 'week' ? getWeekRange(offset - 1) : getMonthRange(offset - 1)
   }, [period, offset])
+
+  // Задачи за период: «записано» — с днём в периоде, «закрыто» — закрытые в периоде
+  const taskStats = useMemo(() => {
+    const inRange = new Set(range.days)
+    const localDay = (iso?: string) => (iso ? toKey(new Date(iso.replace(' ', 'T'))) : '')
+    const taskDay = (t: Task) => t.date || localDay(t.created)
+    return {
+      recorded: tasks.filter((t) => inRange.has(taskDay(t))).length,
+      closed: tasks.filter((t) => t.done && inRange.has(localDay(t.done_at))).length,
+      openNow: tasks.filter((t) => !t.done && taskDay(t) <= todayKey).length,
+    }
+  }, [tasks, range.days, todayKey])
 
   const rangeDaysPast = useMemo(() => {
     return range.days.filter((day) => parseKey(day) <= todayDate)
@@ -772,6 +786,35 @@ export function AnalyticsScreen({ habits, logs, getStreak, getBestStreak, onClos
             <div className={styles.infoSub}>{recordHabits.current.name}</div>
           </motion.div>
         </motion.section>
+
+        {tasks.length > 0 && (
+          <motion.section
+            className={styles.tasksBlock}
+            variants={sectionVariants}
+            initial="initial"
+            animate="animate"
+            transition={{ duration: reduceMotion ? 0 : 0.28, ease: ANALYTICS_EASE, delay: 0.18 }}
+          >
+            <div className={styles.sectionHeadCompact}>
+              <span className={styles.sectionTitle}>Задачи</span>
+              <span className={styles.tasksOpen}>открыто сейчас: {taskStats.openNow}</span>
+            </div>
+            <div className={styles.tasksGrid}>
+              <div className={styles.infoCard}>
+                <div className={styles.infoValue}>
+                  <AnimatedNumber value={taskStats.recorded} />
+                </div>
+                <div className={styles.infoText}>записано</div>
+              </div>
+              <div className={styles.infoCard}>
+                <div className={styles.infoValue}>
+                  <AnimatedNumber value={taskStats.closed} />
+                </div>
+                <div className={styles.infoText}>закрыто</div>
+              </div>
+            </div>
+          </motion.section>
+        )}
 
         <motion.section
           className={styles.activitySection}

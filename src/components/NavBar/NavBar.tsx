@@ -10,7 +10,7 @@ interface NavBarProps {
 
 // «home» — экран привычек (исторический id); новая привычка — кнопкой «+» в карточке дня на этом экране
 const TABS: { id: Screen; icon: string; label: string }[] = [
-  { id: 'home', icon: 'routine', label: 'Привычки' },
+  { id: 'home', icon: 'event_repeat', label: 'Привычки' },
   { id: 'tasks', icon: 'checklist', label: 'Задачи' },
   { id: 'analytics', icon: 'analytics', label: 'Аналитика' },
   { id: 'profile', icon: 'person', label: 'Профиль' },
