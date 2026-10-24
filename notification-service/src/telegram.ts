@@ -127,7 +127,7 @@ export async function sendMessage(
 }
 
 /** Кнопка слева от поля ввода — приложение; подпись короткая (ширина кнопки = ширина текста). Команды — набором «/». */
-export async function setChatMenuButton(chatId: string, buttonText: string = '📱'): Promise<void> {
+export async function setChatMenuButton(chatId: string, buttonText: string = '›'): Promise<void> {
   if (!WEBAPP_URL) return
 
   await apiCall('setChatMenuButton', {

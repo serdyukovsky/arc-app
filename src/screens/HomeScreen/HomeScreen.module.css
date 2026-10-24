@@ -16,6 +16,19 @@
   }
 }
 
+.partSection + .partSection {
+  margin-top: 1.4rem;
+}
+
+.partTitle {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.38;
+  padding: 0 2.2rem 0.55rem;
+}
+
 .list {
   display: flex;
   flex-direction: column;

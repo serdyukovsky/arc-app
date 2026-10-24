@@ -7,6 +7,7 @@ import { triggerHaptic } from '@/lib/haptics'
 import { getMilestoneProgress } from '@/lib/milestones'
 import { Header } from '@/components/Header/Header'
 import { HeroCard } from '@/components/HeroCard/HeroCard'
+import { groupByPartOfDay, PART_LABEL } from '@/lib/partOfDay'
 import { HabitCard } from '@/components/HabitCard/HabitCard'
 import { Drawer } from '@/components/Drawer/Drawer'
 import { Icon } from '@/components/Icon/Icon'
@@ -371,39 +372,44 @@ export function HomeScreen({
         onAdd={onAddHabit}
       />
 
-      <div className={styles.list}>
-        <AnimatePresence initial={false}>
-          {habits.map((habit) => (
-            <motion.div
-              key={habit.id}
-              layout="position"
-              exit={{ opacity: 0 }}
-              transition={{
-                opacity: { duration: 0.12, ease: 'linear' },
-                layout: { duration: 0.18, ease: [0.2, 0.8, 0.2, 1] },
-              }}
-            >
-              <HabitCard
-                habit={habit}
-                todayValue={getTodayValue(habit.id, activeDay)}
-                isDoneToday={isDoneToday(habit, activeDay)}
-                doneDates={getDoneDates(habit.id)}
-                streak={getStreak(habit, activeDay)}
-                weekDoneCount={getWeekDoneCount(habit.id, activeDay)}
-                pulse={pulseHabitId === habit.id}
-                onDayPress={(day) => handleDayPress(habit, day)}
-                onTap={() => {
-                  void handleTap(habit)
-                }}
-                onLongPress={() => {
-                  setDrawerExpandingToEdit(false)
-                  setDrawerHabit(habit)
-                }}
-              />
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+      {groupByPartOfDay(habits).map((group) => (
+        <section key={group.part} className={styles.partSection}>
+          <div className={styles.partTitle}>{PART_LABEL[group.part]}</div>
+          <div className={styles.list}>
+            <AnimatePresence initial={false}>
+              {group.habits.map((habit) => (
+                <motion.div
+                  key={habit.id}
+                  layout="position"
+                  exit={{ opacity: 0 }}
+                  transition={{
+                    opacity: { duration: 0.12, ease: 'linear' },
+                    layout: { duration: 0.18, ease: [0.2, 0.8, 0.2, 1] },
+                  }}
+                >
+                  <HabitCard
+                    habit={habit}
+                    todayValue={getTodayValue(habit.id, activeDay)}
+                    isDoneToday={isDoneToday(habit, activeDay)}
+                    doneDates={getDoneDates(habit.id)}
+                    streak={getStreak(habit, activeDay)}
+                    weekDoneCount={getWeekDoneCount(habit.id, activeDay)}
+                    pulse={pulseHabitId === habit.id}
+                    onDayPress={(day) => handleDayPress(habit, day)}
+                    onTap={() => {
+                      void handleTap(habit)
+                    }}
+                    onLongPress={() => {
+                      setDrawerExpandingToEdit(false)
+                      setDrawerHabit(habit)
+                    }}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </section>
+      ))}
 
       <Drawer
         open={!!drawerHabit}
