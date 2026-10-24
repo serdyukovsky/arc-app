@@ -47,6 +47,10 @@ jobs:
         run: npm run build
         working-directory: notification-service
 
+      - name: Test notification service
+        run: npm test
+        working-directory: notification-service
+
       - name: Validate deploy secrets
         run: |
           set -eu
@@ -103,7 +107,7 @@ jobs:
             -e "ssh -p $PORT" \
             notification-service/ "$DEPLOY_USER@$DEPLOY_HOST:/opt/arc-notifications/"
           ssh -p "$PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "systemctl restart arc-notifications && echo 'ARC notifications restarted'"
+            "cd /opt/arc-notifications && npm ci --no-audit --no-fund && systemctl restart arc-notifications && echo 'ARC notifications restarted'"
 
       - name: Optional reload command
         run: |

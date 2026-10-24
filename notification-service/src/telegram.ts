@@ -1,12 +1,19 @@
+import { fetch as undiciFetch, ProxyAgent } from 'undici'
+import { TELEGRAM_PROXY } from './config.js'
+
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || ''
-const WEBAPP_URL = process.env.WEBAPP_URL || ''
+export const WEBAPP_URL = process.env.WEBAPP_URL || ''
 const API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`
+
+// Прокси — только для Telegram (PocketBase ходит напрямую через глобальный fetch)
+const telegramAgent = TELEGRAM_PROXY ? new ProxyAgent(TELEGRAM_PROXY) : undefined
 
 interface SendMessageOptions {
   parseMode?: 'HTML' | 'Markdown'
   withAppButton?: boolean
   buttonText?: string
   persistentAppKeyboard?: boolean
+  replyMarkup?: unknown // своя клавиатура (сообщение-блок) — вместо кнопки приложения
 }
 
 interface TelegramApiResponse<T> {
@@ -15,7 +22,7 @@ interface TelegramApiResponse<T> {
   description?: string
 }
 
-interface TelegramUpdate {
+export interface TelegramUpdate {
   update_id: number
   message?: {
     message_id: number
@@ -23,19 +30,26 @@ interface TelegramUpdate {
     text?: string
     from?: { id: number | string; is_bot?: boolean }
   }
+  callback_query?: {
+    id: string
+    from: { id: number | string }
+    data?: string
+    message?: { message_id: number; chat: { id: number | string } }
+  }
 }
 
 const START_TEXT =
-  'Трекер привычек помогает держать ритм и не терять стрик.\n\nОткрой приложение кнопкой ниже и начни отмечать прогресс.'
+  'Привычки — в приложении, отметки — прямо здесь, кнопками под напоминаниями.'
 
-async function apiCall<T>(method: string, body?: unknown): Promise<T | null> {
+export async function apiCall<T>(method: string, body?: unknown): Promise<T | null> {
   if (!BOT_TOKEN) return null
 
   try {
-    const res = await fetch(`${API_BASE}/${method}`, {
+    const res = await undiciFetch(`${API_BASE}/${method}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
+      dispatcher: telegramAgent,
     })
     const data = (await res.json()) as TelegramApiResponse<T>
     if (data.ok) return data.result ?? null
@@ -87,6 +101,7 @@ export async function sendMessage(
     withAppButton = true,
     buttonText = 'Открыть приложение',
     persistentAppKeyboard = false,
+    replyMarkup,
   } = options
 
   const body: Record<string, unknown> = {
@@ -95,7 +110,9 @@ export async function sendMessage(
     parse_mode: parseMode,
   }
 
-  if (withAppButton && WEBAPP_URL) {
+  if (replyMarkup) {
+    body.reply_markup = replyMarkup
+  } else if (withAppButton && WEBAPP_URL) {
     body.reply_markup = persistentAppKeyboard
       ? buildPersistentAppKeyboard(buttonText)
       : buildInlineAppMarkup(buttonText)
@@ -118,16 +135,31 @@ export async function setChatMenuButton(chatId: string, buttonText: string = 'О
   })
 }
 
+export async function editMessage(chatId: string, messageId: string, text: string, replyMarkup?: unknown): Promise<void> {
+  // «message is not modified» — не ошибка: состояние уже такое
+  await apiCall('editMessageText', {
+    chat_id: chatId,
+    message_id: Number(messageId),
+    text,
+    parse_mode: 'HTML',
+    reply_markup: replyMarkup ?? { inline_keyboard: [] },
+  })
+}
+
+export async function answerCallback(callbackId: string, text?: string): Promise<void> {
+  await apiCall('answerCallbackQuery', { callback_query_id: callbackId, ...(text ? { text } : {}) })
+}
+
 export async function getUpdates(offset?: number): Promise<TelegramUpdate[]> {
   const result = await apiCall<TelegramUpdate[]>('getUpdates', {
     timeout: 25,
-    allowed_updates: ['message'],
+    allowed_updates: ['message', 'callback_query'],
     ...(offset ? { offset } : {}),
   })
   return result ?? []
 }
 
-async function handleStart(chatId: string): Promise<void> {
+export async function handleStart(chatId: string): Promise<void> {
   await setChatMenuButton(chatId)
   await sendMessage(chatId, START_TEXT, {
     parseMode: 'HTML',
@@ -137,7 +169,7 @@ async function handleStart(chatId: string): Promise<void> {
   })
 }
 
-export async function pollBotUpdates(): Promise<void> {
+export async function pollBotUpdates(onUpdate: (update: TelegramUpdate) => Promise<void>): Promise<void> {
   if (!BOT_TOKEN) return
 
   let offset = 0
@@ -146,18 +178,12 @@ export async function pollBotUpdates(): Promise<void> {
   while (true) {
     try {
       const updates = await getUpdates(offset)
+      if (updates.length === 0) await new Promise((resolve) => setTimeout(resolve, 300)) // ошибка сети → без спама
 
       for (const update of updates) {
         offset = update.update_id + 1
-
-        const message = update.message
-        const chatId = message?.chat?.id
-        const text = String(message?.text || '').trim()
-        if (!chatId || !text) continue
-
-        if (text === '/start' || text.startsWith('/start ')) {
-          await handleStart(String(chatId))
-        }
+        // нажатия не ждут друг друга: каждое — своя задача
+        onUpdate(update).catch((err) => console.error('[telegram] update error:', err))
       }
     } catch (err) {
       console.error('[telegram] Polling loop error:', err)

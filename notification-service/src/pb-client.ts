@@ -80,10 +80,67 @@ export async function getLogsForUser(userId: string, days: number = 90): Promise
   since.setDate(since.getDate() - days)
   const sinceStr = since.toISOString().split('T')[0]
 
+  // фильтр по пользователю: раньше сюда попадали отметки всех пользователей
+  const filter = encodeURIComponent(`habit.user='${userId}' && date>='${sinceStr}'`)
   const data = await request<{ items: HabitLog[] }>(
-    `/api/collections/habit_logs/records?filter=(date>='${sinceStr}')&perPage=5000&sort=-date`
+    `/api/collections/habit_logs/records?filter=(${filter})&perPage=5000&sort=-date`
   )
   return data?.items || []
+}
+
+export async function getUserByTelegramId(telegramId: string): Promise<UserRecord | null> {
+  const filter = encodeURIComponent(`email='tg_${telegramId}@telegram.arc.local'`)
+  const data = await request<{ items: UserRecord[] }>(`/api/collections/users/records?filter=(${filter})&perPage=1`)
+  return data?.items?.[0] || null
+}
+
+export async function getHabit(habitId: string): Promise<Habit | null> {
+  return request<Habit>(`/api/collections/habits/records/${habitId}`)
+}
+
+async function logsForHabitDate(habitId: string, dateKey: string): Promise<HabitLog[]> {
+  const filter = encodeURIComponent(`habit='${habitId}' && date='${dateKey}'`)
+  const data = await request<{ items: HabitLog[] }>(`/api/collections/habit_logs/records?filter=(${filter})&perPage=50`)
+  return data?.items || []
+}
+
+/** id привычек пользователя, отмеченных за дату (value > 0). */
+export async function getDoneHabitIds(userId: string, dateKey: string): Promise<Set<string>> {
+  const filter = encodeURIComponent(`habit.user='${userId}' && date='${dateKey}' && value>0`)
+  const data = await request<{ items: HabitLog[] }>(`/api/collections/habit_logs/records?filter=(${filter})&perPage=500`)
+  return new Set((data?.items || []).map((l) => l.habit))
+}
+
+/**
+ * Отметка из бота — так же, как в приложении: одна запись на привычку и дату;
+ * снятие отметки удаляет запись. Возвращает новое состояние (true = отмечено) или null при ошибке.
+ */
+export async function toggleHabitLog(habitId: string, dateKey: string): Promise<boolean | null> {
+  const existing = (await logsForHabitDate(habitId, dateKey)).filter((l) => l.value > 0)
+  if (existing.length > 0) {
+    for (const log of existing) {
+      const ok = await requestOk(`/api/collections/habit_logs/records/${log.id}`, 'DELETE')
+      if (!ok) return null
+    }
+    return false
+  }
+  const created = await request<HabitLog>('/api/collections/habit_logs/records', {
+    method: 'POST',
+    body: { habit: habitId, date: dateKey, value: 1 },
+  })
+  return created ? true : null
+}
+
+async function requestOk(path: string, method: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${PB_URL}${path}`, {
+      method,
+      headers: adminToken ? { Authorization: `Bearer ${adminToken}` } : {},
+    })
+    return res.ok
+  } catch {
+    return false
+  }
 }
 
 export async function getUserRecord(userId: string): Promise<UserRecord | null> {
@@ -93,6 +150,23 @@ export async function getUserRecord(userId: string): Promise<UserRecord | null> 
 export function extractTelegramId(email: string): string | null {
   const match = email.match(/^tg_(\d+)@/)
   return match ? match[1] : null
+}
+
+/** Сообщения-блоки за дату (для перерисовки и снятия кнопок). */
+export async function getBlockMessages(userId: string, dateKey: string): Promise<NotificationLog[]> {
+  const filter = encodeURIComponent(`user='${userId}' && type='reminder' && date_key='${dateKey}'`)
+  const data = await request<{ items: NotificationLog[] }>(
+    `/api/collections/notification_log/records?filter=(${filter})&perPage=50`
+  )
+  return data?.items || []
+}
+
+export async function getSettingsForUser(userId: string): Promise<(NotificationSettings & { id: string }) | null> {
+  const filter = encodeURIComponent(`user='${userId}'`)
+  const data = await request<{ items: (NotificationSettings & { id: string })[] }>(
+    `/api/collections/notification_settings/records?filter=(${filter})&sort=-last_active&perPage=1`
+  )
+  return data?.items?.[0] || null
 }
 
 export async function wasNotificationSent(

@@ -271,6 +271,16 @@ routerAdd("POST", "/api/arc/telegram-auth", function(e) {
     return errorJson(401, "Invalid Telegram initData: missing user id");
   }
 
+  // Личное приложение: пускаем только перечисленные Telegram ID (через запятую).
+  // Пусто — пускаем всех (как раньше).
+  var allowedIds = String($os.getenv("ARC_ALLOWED_TELEGRAM_IDS") || "")
+    .split(",")
+    .map(function(v) { return v.trim(); })
+    .filter(function(v) { return v.length > 0; });
+  if (allowedIds.length > 0 && allowedIds.indexOf(String(tgUser.id)) < 0) {
+    return errorJson(403, "Access denied");
+  }
+
   var email = "tg_" + String(tgUser.id) + "@telegram.arc.local";
   var userRecord = null;
 
