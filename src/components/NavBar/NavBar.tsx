@@ -2,7 +2,7 @@ import { Fragment } from 'react'
 import { Icon } from '@/components/Icon/Icon'
 import styles from './NavBar.module.css'
 
-export type Screen = 'home' | 'analytics' | 'archive' | 'profile'
+export type Screen = 'home' | 'analytics' | 'profile'
 
 interface NavBarProps {
   active: Screen
@@ -13,7 +13,6 @@ interface NavBarProps {
 const TABS: { id: Screen; icon: string; label: string }[] = [
   { id: 'home', icon: 'home', label: 'Главная' },
   { id: 'analytics', icon: 'analytics', label: 'Аналитика' },
-  { id: 'archive', icon: 'dataset', label: 'Архив' },
   { id: 'profile', icon: 'person', label: 'Профиль' },
 ]
 

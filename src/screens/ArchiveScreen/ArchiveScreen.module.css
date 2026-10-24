@@ -1,11 +1,44 @@
-.screen {
-  padding: calc(16px + var(--safe-top) + var(--safe-top-gap) + 24px) 20px calc(100px + var(--safe-bottom));
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 960;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-width: 390px;
+  margin: 0 auto;
 }
 
-.title {
-  font-size: 28px;
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(3.5rem + var(--safe-top) + var(--safe-top-gap)) 1.25rem 1rem;
+  flex-shrink: 0;
+}
+
+.backBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.headerTitle {
+  font-size: 17px;
   font-weight: 700;
-  margin-bottom: 20px;
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 20px calc(40px + var(--safe-bottom));
 }
 
 .empty {

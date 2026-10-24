@@ -8,9 +8,13 @@ interface ProfileScreenProps {
   strictMode: boolean
   onStrictModeChange: (v: boolean) => void
   onOpenNotifications: () => void
+  archivedCount: number
+  onOpenArchive: () => void
 }
 
-export function ProfileScreen({ user, totalHabits, bestStreak, strictMode, onStrictModeChange, onOpenNotifications }: ProfileScreenProps) {
+export function ProfileScreen({
+  user, totalHabits, bestStreak, strictMode, onStrictModeChange, onOpenNotifications, archivedCount, onOpenArchive,
+}: ProfileScreenProps) {
   const name = user
     ? [user.first_name, user.last_name].filter(Boolean).join(' ')
     : 'Пользователь'
@@ -46,6 +50,12 @@ export function ProfileScreen({ user, totalHabits, bestStreak, strictMode, onStr
           <Icon name="notifications" size={22} />
           <span>Уведомления</span>
           <Icon name="chevron_right" size={20} style={{ marginLeft: 'auto', opacity: 0.3 }} />
+        </button>
+        <button className={styles.settingRow} onClick={onOpenArchive}>
+          <Icon name="archive" size={22} />
+          <span>Архив</span>
+          <span style={{ marginLeft: 'auto', opacity: 0.35 }}>{archivedCount || ''}</span>
+          <Icon name="chevron_right" size={20} style={{ opacity: 0.3 }} />
         </button>
       </div>
 

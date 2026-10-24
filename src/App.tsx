@@ -62,6 +62,7 @@ export default function App() {
   const [restoreDrawerHabitId, setRestoreDrawerHabitId] = useState<string | null>(null)
   const [popupState, setPopupState] = useState<PopupState>(createInitialPopupState())
   const [notifSettingsOpen, setNotifSettingsOpen] = useState(false)
+  const [archiveOpen, setArchiveOpen] = useState(false)
 
   const telegram = useTelegram()
   const { token, userId, isLoading: authLoading } = useAuth(telegram.getInitData)
@@ -357,21 +358,6 @@ export default function App() {
     })
 
     if (streak > prevStreak) {
-      if (prevStreak === 0 && streak === 1 && lifetimeDays <= 1) {
-        enqueuePopup({
-          type: 'first_complete',
-          habitId: habit.id,
-          priority: POPUP_PRIORITY.first_complete,
-          data: {
-            habitName: habit.name,
-            habitType: habit.type,
-            streak,
-            lifetimeDays,
-            timeOfDay: getTimeOfDay(),
-          },
-        })
-      }
-
       if (justHitMilestone && milestoneValue !== null) {
         enqueuePopup({
           type: 'milestone_reached',
@@ -846,13 +832,6 @@ export default function App() {
                 onClose={() => navigateTo('home')}
               />
             )}
-            {screen === 'archive' && (
-              <ArchiveScreen
-                habits={archivedHabits}
-                onUnarchive={unarchiveHabit}
-                showToast={showToast}
-              />
-            )}
             {screen === 'profile' && (
               <ProfileScreen
                 user={tgUser}
@@ -861,6 +840,8 @@ export default function App() {
                 strictMode={notifSettings.strictMode}
                 onStrictModeChange={(v) => updateNotifSettings({ strictMode: v })}
                 onOpenNotifications={() => setNotifSettingsOpen(true)}
+                archivedCount={archivedHabits.length}
+                onOpenArchive={() => setArchiveOpen(true)}
               />
             )}
           </motion.div>
@@ -896,6 +877,14 @@ export default function App() {
         editingHabit={editHabit}
         fullScreen={!!editHabit}
         disableEnterAnimation={editFromDrawer}
+        showToast={showToast}
+      />
+
+      <ArchiveScreen
+        open={archiveOpen}
+        onClose={() => setArchiveOpen(false)}
+        habits={archivedHabits}
+        onUnarchive={unarchiveHabit}
         showToast={showToast}
       />
 
