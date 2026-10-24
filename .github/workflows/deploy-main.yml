@@ -93,6 +93,11 @@ jobs:
             -e "ssh -p $PORT" \
             pocketbase/pb_hooks/arc.pb.js \
             "$DEPLOY_USER@$DEPLOY_HOST:/opt/arc-pocketbase/pb_hooks/arc.pb.js"
+          # миграции (без --delete: на сервере есть ранние, которых нет в репозитории); применятся при рестарте
+          rsync -az \
+            -e "ssh -p $PORT" \
+            pocketbase/pb_migrations/ \
+            "$DEPLOY_USER@$DEPLOY_HOST:/opt/arc-pocketbase/pb_migrations/"
           ssh -p "$PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "systemctl restart arc-pocketbase && echo 'PocketBase restarted'"
 
@@ -102,6 +107,7 @@ jobs:
           PORT="${DEPLOY_PORT:-22}"
           rsync -az --delete \
             --exclude '.env' \
+            --exclude 'secrets' \
             --exclude 'node_modules' \
             --exclude 'dist' \
             -e "ssh -p $PORT" \

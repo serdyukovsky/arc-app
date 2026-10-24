@@ -13,6 +13,7 @@ import { weeklyReportMessage } from './templates.js'
 import { ALLOWED_TELEGRAM_ID } from './config.js'
 import { isTappable, reminderTime } from './blocks.js'
 import { blockHabits, expireBlocks, renderBlock } from './bot.js'
+import { syncSheet } from './export.js'
 import type { Habit, HabitLog } from './types.js'
 
 function buildDoneDates(logs: HabitLog[], habitId: string): Set<string> {
@@ -93,6 +94,9 @@ async function processUser(settings: any, chatId: string) {
   const timezone: string = settings.timezone || 'Asia/Barnaul'
   const { hours, minutes, dayOfWeek, dateKey } = getLocalTime(timezone)
   const currentTimeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+
+  // ─── Таблица: раз в 5 минут догоняет отметки из приложения (в Google — только если что-то поменялось) ──
+  if (minutes % 5 === 0) void syncSheet(userId, timezone)
 
   // ─── Полночь: у вышедших из запаса блоков снять кнопки (до проверки тихих часов) ──
   if (hours === 0 && minutes === 0) {

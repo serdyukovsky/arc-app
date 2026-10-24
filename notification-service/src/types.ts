@@ -19,7 +19,7 @@ export interface HabitLog {
   habit: string
   date: string
   value: number
-  created: string
+  created?: string // время отметки; есть с миграции 1792820000, у старых записей пусто
 }
 
 export interface NotificationSettings {

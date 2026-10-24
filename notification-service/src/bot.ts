@@ -2,6 +2,7 @@
 import { BACKFILL_DAYS, isAllowed } from './config.js'
 import { blockKeyboard, blockText, isComplete, isMarkable, parseCallback, reminderTime } from './blocks.js'
 import { getLocalTime } from './date.js'
+import { syncSheet } from './export.js'
 import {
   getBlockMessages,
   getDoneHabitIds,
@@ -31,9 +32,8 @@ export async function renderBlock(userId: string, time: string, dateKey: string,
   }
 }
 
-async function userToday(userId: string): Promise<string> {
-  const settings = await getSettingsForUser(userId)
-  return getLocalTime(settings?.timezone || 'Asia/Barnaul').dateKey
+async function userZone(userId: string): Promise<string> {
+  return (await getSettingsForUser(userId))?.timezone || 'Asia/Barnaul'
 }
 
 // перерисовки одного сообщения — по одной; тапы во время перерисовки склеиваются в одну догоняющую
@@ -65,13 +65,15 @@ async function onCallback(cb: NonNullable<TelegramUpdate['callback_query']>): Pr
     await answerCallback(cb.id)
     return
   }
-  const todayKey = await userToday(habit.user)
+  const timezone = await userZone(habit.user)
+  const todayKey = getLocalTime(timezone).dateKey
   if (!isMarkable(parsed.dateKey, todayKey, BACKFILL_DAYS)) {
     await answerCallback(cb.id, 'Этот день уже не отметить')
   } else {
     await answerCallback(cb.id) // сразу гасим «загрузку» на кнопке
     const state = await toggleHabitLog(habit.id, parsed.dateKey)
     if (state === null) console.error('[bot] toggle failed', habit.id, parsed.dateKey)
+    else void syncSheet(habit.user, timezone)
   }
   const time = reminderTime(habit)
   if (!time) return

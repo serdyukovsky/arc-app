@@ -75,6 +75,14 @@ export async function getHabitsForUser(userId: string): Promise<Habit[]> {
   return data?.items || []
 }
 
+/** Все привычки, включая архивные (для выгрузки). */
+export async function getAllHabitsForUser(userId: string): Promise<Habit[]> {
+  const data = await request<{ items: Habit[] }>(
+    `/api/collections/habits/records?filter=(user='${userId}')&sort=order&perPage=500`
+  )
+  return data?.items || []
+}
+
 export async function getLogsForUser(userId: string, days: number = 90): Promise<HabitLog[]> {
   const since = new Date()
   since.setDate(since.getDate() - days)
