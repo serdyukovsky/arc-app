@@ -2,19 +2,6 @@
   padding: calc(2.25rem + var(--safe-top) + var(--safe-top-gap)) 1.25rem 1.5rem;
 }
 
-.topRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.date {
-  font-size: 0.72rem;
-  font-weight: 500;
-  opacity: 0.3;
-}
-
 .greeting {
   font-size: 1.65rem;
   font-weight: 700;

@@ -1,43 +1,26 @@
 import styles from './HeroCard.module.css'
-import heroIllustration from '@/assets/peeps-hero-card.svg'
 
 interface HeroCardProps {
   completed: number
   total: number
+  label?: string // «Сегодня» или выбранный день
 }
 
-export function HeroCard({ completed, total }: HeroCardProps) {
-  const allDone = total > 0 && completed >= total
+const pluralHabits = (n: number): string => {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return 'привычки'
+  return 'привычек'
+}
 
-  const text = (() => {
-    if (allDone) return 'Все привычки\nвыполнены! 🎉'
-    if (completed <= 0) return `0 из ${total} привычек\nвыполнено`
-    if (completed === 2) return `2 из ${total} привычек\nвыполнено 🔥`
-    if (completed === 1) return `1 из ${total} привычек\nвыполнено 💪`
-    return `${completed} из ${total} привычек\nвыполнено 🔥`
-  })()
+export function HeroCard({ completed, total, label = 'Сегодня' }: HeroCardProps) {
+  const allDone = total > 0 && completed >= total
+  const text = allDone ? 'Всё выполнено' : `${completed} из ${total} ${pluralHabits(total)} выполнено`
 
   return (
     <div className={styles.card}>
-      <div className={styles.media}>
-        <img
-          src={heroIllustration}
-          alt=""
-          className={styles.illustration}
-          draggable={false}
-        />
-      </div>
-      <div className={styles.textBlock}>
-        <div className={styles.dim}>Сегодня</div>
-        <div className={styles.text}>
-          {text.split('\n').map((line) => (
-            <span key={line}>
-              {line}
-              <br />
-            </span>
-          ))}
-        </div>
-      </div>
+      <div className={styles.dim}>{label}</div>
+      <div className={styles.text}>{text}</div>
     </div>
   )
 }

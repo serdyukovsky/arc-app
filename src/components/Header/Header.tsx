@@ -1,5 +1,4 @@
-import { formatDate, getGreeting, getWeekDays, isToday, DAY_NAMES_SHORT, parseKey, today } from '@/lib/date'
-import { Logo } from '@/components/Logo/Logo'
+import { getGreeting, getWeekDays, isToday, DAY_NAMES_SHORT, parseKey, today } from '@/lib/date'
 import styles from './Header.module.css'
 
 interface HeaderProps {
@@ -16,10 +15,6 @@ export function Header({ selectedDay = null, onDayPress }: HeaderProps = {}) {
 
   return (
     <div className={styles.header}>
-      <div className={styles.topRow}>
-        <div className={styles.date}>{formatDate(activeDay)}</div>
-        <Logo size={22} opacity={0.45} />
-      </div>
       <div className={styles.greeting}>{getGreeting()}</div>
       <div className={styles.week}>
         {weekDays.map((day, i) => {

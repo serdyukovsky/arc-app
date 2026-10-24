@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Habit, HabitLog } from '@/types'
 import { CATEGORIES } from '@/types'
-import { parseKey, today } from '@/lib/date'
+import { formatDate, parseKey, today } from '@/lib/date'
 import { triggerHaptic } from '@/lib/haptics'
 import { getMilestoneProgress } from '@/lib/milestones'
 import { Header } from '@/components/Header/Header'
@@ -360,7 +360,11 @@ export function HomeScreen({
   return (
     <div className={styles.screen}>
       <Header selectedDay={selectedHeaderDay} onDayPress={handleHeaderDayPress} />
-      <HeroCard completed={activeDay === todayKey ? todayCompletedCount : completedForActiveDay} total={habits.length} />
+      <HeroCard
+        completed={activeDay === todayKey ? todayCompletedCount : completedForActiveDay}
+        total={habits.length}
+        label={activeDay === todayKey ? 'Сегодня' : formatDate(activeDay)}
+      />
 
       <div className={styles.list}>
         <AnimatePresence initial={false}>
