@@ -285,7 +285,7 @@ async function onCommand(chatId: string, cmd: string, args: string): Promise<voi
         return
       }
       const phrase = await addPhrase('own', args)
-      await reply(phrase ? `Записано в свои фразы (<code>${phrase.id}</code>).` : 'Не получилось записать, попробуй ещё раз.')
+      await reply(phrase ? 'Записано в свои фразы.' : 'Не получилось записать, попробуй ещё раз.')
       return
     }
     case 'фразы':
@@ -295,18 +295,25 @@ async function onCommand(chatId: string, cmd: string, args: string): Promise<voi
         await reply('Своих фраз пока нет. Добавляются так: <code>/фраза текст</code>')
         return
       }
-      const lines = own.map((p) => `<code>${p.id}</code> ${escapeHtml(p.text)}`)
+      // номера — порядковые по списку (он отсортирован по времени добавления); /удали N убирает N-ю
+      const lines = own.map((p, i) => `${i + 1}. ${escapeHtml(p.text)}`)
       await reply(['<b>Свои фразы</b>', ...lines, '', 'Убрать: <code>/удали номер</code>'].join('\n'))
       return
     }
     case 'удали':
     case 'unphrase': {
-      const id = args.replace(/^#/, '')
-      if (!id) {
-        await reply('Номер фразы после команды: <code>/удали номер</code>. Номера — в /фразы.')
+      const n = parseInt(args.replace(/^#/, ''), 10)
+      if (!n) {
+        await reply('Номер фразы после команды: <code>/удали 2</code>. Номера — в /фразы.')
         return
       }
-      await reply((await deactivatePhrase(id)) ? `Фраза ${escapeHtml(id)} убрана.` : `Своей фразы ${escapeHtml(id)} нет.`)
+      const own = await getPhrases('own')
+      const phrase = own[n - 1]
+      if (!phrase) {
+        await reply(`Фразы под номером ${n} нет. Список — в /фразы.`)
+        return
+      }
+      await reply((await deactivatePhrase(phrase.id)) ? `Убрал: «${escapeHtml(phrase.text)}».` : 'Не получилось убрать, попробуй ещё раз.')
       return
     }
     case 'задача':

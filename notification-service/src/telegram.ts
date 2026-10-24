@@ -126,7 +126,8 @@ export async function sendMessage(
   return result?.message_id ? String(result.message_id) : null
 }
 
-export async function setChatMenuButton(chatId: string, buttonText: string = 'Открыть приложение'): Promise<void> {
+/** Кнопка слева от поля ввода — приложение. Команды при этом видны, если набрать «/». */
+export async function setChatMenuButton(chatId: string, buttonText: string = 'Приложение'): Promise<void> {
   if (!WEBAPP_URL) return
 
   await apiCall('setChatMenuButton', {
@@ -163,18 +164,13 @@ export async function getUpdates(offset?: number): Promise<TelegramUpdate[]> {
   return result ?? []
 }
 
-/** Меню бота — список команд (не приложение): кнопка приложения в меню вытесняла команды. */
-export async function setCommandsMenuButton(chatId: string): Promise<void> {
-  await apiCall('setChatMenuButton', { chat_id: chatId, menu_button: { type: 'commands' } })
-}
-
 /** Убрать постоянную клавиатуру «Открыть приложение» (старый /start) — она закрывала поле ввода. */
 export async function removeReplyKeyboard(chatId: string, text: string): Promise<void> {
   await apiCall('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', reply_markup: { remove_keyboard: true } })
 }
 
 export async function handleStart(chatId: string): Promise<void> {
-  await setCommandsMenuButton(chatId)
+  await setChatMenuButton(chatId)
   await removeReplyKeyboard(chatId, START_TEXT)
   await sendApp(chatId)
 }
