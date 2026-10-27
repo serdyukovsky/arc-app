@@ -46,11 +46,15 @@ export async function apiCall<T>(method: string, body?: unknown): Promise<T | nu
   if (!BOT_TOKEN) return null
 
   try {
+    // предел времени: зависшее через прокси соединение иначе молча останавливает приём нажатий
+    // (getUpdates — long poll 25 с, ему запас побольше)
+    const limitMs = method === 'getUpdates' ? 40_000 : 15_000
     const res = await undiciFetch(`${API_BASE}/${method}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
       dispatcher: telegramAgent,
+      signal: AbortSignal.timeout(limitMs),
     })
     const data = (await res.json()) as TelegramApiResponse<T>
     if (data.ok) return data.result ?? null

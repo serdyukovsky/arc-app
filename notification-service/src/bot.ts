@@ -173,7 +173,8 @@ async function onCallback(cb: NonNullable<TelegramUpdate['callback_query']>): Pr
   const parsed = parseCallback(cb.data)
   const habit = parsed && (await getHabit(parsed.habitId))
   if (!parsed || !habit || !cb.message) {
-    await answerCallback(cb.id)
+    console.log(`[bot] callback ignored: ${cb.data} (${!parsed ? 'неизвестный формат — старая кнопка?' : !habit ? 'привычка не найдена' : 'нет сообщения'})`)
+    await answerCallback(cb.id, parsed ? 'Привычка не найдена' : 'Эта кнопка устарела')
     return
   }
   const timezone = await userZone(habit.user)
@@ -185,6 +186,7 @@ async function onCallback(cb: NonNullable<TelegramUpdate['callback_query']>): Pr
   } else {
     await answerCallback(cb.id) // сразу гасим «загрузку» на кнопке
     const state = await toggleHabitLog(habit.id, parsed.dateKey)
+    console.log(`[bot] ${habit.name} ${parsed.dateKey} -> ${state === null ? 'ОШИБКА' : state ? 'отмечено' : 'снято'}`)
     if (state === null) console.error('[bot] toggle failed', habit.id, parsed.dateKey)
     else void syncSheet(habit.user, timezone)
   }
@@ -350,8 +352,14 @@ async function onCommand(chatId: string, cmd: string, args: string): Promise<voi
 
 export async function onUpdate(update: TelegramUpdate): Promise<void> {
   if (update.callback_query) {
-    if (!isAllowed(update.callback_query.from.id)) return
-    await onCallback(update.callback_query)
+    const cb = update.callback_query
+    if (!isAllowed(cb.from.id)) {
+      console.log('[bot] callback from not allowed user', cb.from.id)
+      return
+    }
+    const t0 = Date.now()
+    await onCallback(cb)
+    console.log(`[bot] callback ${cb.data} handled in ${Date.now() - t0} ms`)
     return
   }
   const message = update.message
